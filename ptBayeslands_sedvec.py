@@ -146,7 +146,7 @@ class ptReplica(multiprocessing.Process):
         dzreg = np.reshape(dzi,(ny,nx))
         return zreg,dzreg
 
-    def run_badlands(self, input_vector):
+    def run_badlands_nathan(self, input_vector):
         #Runs a badlands model with the specified inputs
 
         #Create a badlands model instance
@@ -273,8 +273,11 @@ class ptReplica(multiprocessing.Process):
         return elev_vec, erodep_vec, erodep_pts_vec
 
 
-    '''def run_badlands_oldcode(self, input_vector):
+    def run_badlands(self, input_vector):
         #Runs a badlands model with the specified inputs
+
+        rain_region = 4
+        rain_time = 4
 
         #Create a badlands model instance
         model = badlandsModel()
@@ -287,7 +290,7 @@ class ptReplica(multiprocessing.Process):
         model.flow.erodibility.fill(input_vector[1] )
 
         # Adjust precipitation values based on given parameter
-        model.force.rainVal[:] = input_vector[0] 
+        model.force.rainVal[:] = input_vector[0:15] 
 
         # Adjust m and n values
         model.input.SPLm = input_vector[2] 
@@ -335,7 +338,7 @@ class ptReplica(multiprocessing.Process):
             erodep_vec[self.simtime] = erodep
             erodep_pts_vec[self.simtime] = erodep_pts
 
-        return elev_vec, erodep_vec, erodep_pts_vec'''
+        return elev_vec, erodep_vec, erodep_pts_vec
 
 
     def likelihood_func(self,input_vector ):
