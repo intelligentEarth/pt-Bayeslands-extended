@@ -80,7 +80,7 @@ pt_samples = args.pt_samples
 
 
 class ptReplica(multiprocessing.Process):
-    def __init__(self,  num_param, vec_parameters, rain_region, rain_time, minlimits_vec, maxlimits_vec, stepratio_vec,   check_likelihood_sed ,  swap_interval, sim_interval, simtime, samples, real_elev,  real_erodep_pts, erodep_coords, filename, xmlinput,  run_nb, tempr, parameter_queue,event , main_proc,   burn_in):
+    def __init__(self,  num_param, vec_parameters, rain_region, rain_time, len_grid, wid_grid, minlimits_vec, maxlimits_vec, stepratio_vec,   check_likelihood_sed ,  swap_interval, sim_interval, simtime, samples, real_elev,  real_erodep_pts, erodep_coords, filename, xmlinput,  run_nb, tempr, parameter_queue,event , main_proc,   burn_in):
 
         multiprocessing.Process.__init__(self)
         self.processID = tempr      
@@ -113,6 +113,10 @@ class ptReplica(multiprocessing.Process):
 
         self.rain_region = rain_region 
         self.rain_time = rain_time 
+
+
+        self.len_grid = len_grid 
+        self.wid_grid  = wid_grid# for initial topo grid size 
 
     def interpolateArray(self, coords=None, z=None, dz=None):
         """
@@ -275,6 +279,47 @@ class ptReplica(multiprocessing.Process):
         
         return elev_vec, erodep_vec, erodep_pts_vec
 
+    def process_inittopo(self, inittopo_vec, groundtruth_topo, synthetic_initialtopo):
+
+        length = groundtruth_topo.shape[0]
+        width = groundtruth_topo.shape[1]
+
+
+        #length  = 9 
+        #width = 7 
+
+        #x = np.random.rand(length,width)
+
+        len_grid = self.len_grid
+        wid_grid = self.wid_grid
+
+        scale_factor = np.random.rand(len_grid,wid_grid) *100
+
+        sub_gridlen = int(length/len_grid)
+        sub_gridwidth = int(width/wid_grid) 
+        new_length =len_grid * sub_gridlen 
+        new_width =wid_grid *  sub_gridwidth
+
+        reconstructed_topo = groundtruth_topo  # to define the size
+
+
+
+        #print(new_width, new_length)
+  
+        #x = x[0:new_length,0:new_width]
+
+        print(groundtruth_topo. 'groun_truth')
+
+        for l in range(0,len_grid):
+            for w in range(0,wid_grid): 
+                #print(l * sub_gridlen, (l+1) * sub_gridlen, w * sub_gridwidth, (w+1) * sub_gridwidth ) 
+                reconstructed_topo[l * sub_gridlen:(l+1) * sub_gridlen, w * sub_gridwidth: (w+1) * sub_gridwidth] = groundtruth_topo[l * sub_gridlen:(l+1) * sub_gridlen, w * sub_gridwidth: (w+1) * sub_gridwidth  ] * scale_factor[l,w]
+
+        print(reconstructed_topo)
+
+        return reconstructed_topo
+
+
 
     def run_badlands(self, input_vector):
         #Runs a badlands model with the specified inputs
@@ -284,9 +329,33 @@ class ptReplica(multiprocessing.Process):
         #Create a badlands model instance
         model = badlandsModel()
 
+        #----------------------------------------------------------------
+
         # Load the XmL input file
         model.load_xml(str(self.run_nb), self.input, muted=True)
 
+        geoparam  = rain_regiontime+10  # note 10 parameter space is for erod, c-marine etc etc, some extra space ( taking out time dependent rainfall)
+
+        inittopo_vec = input_vector[geoparam:]
+
+        filename=self.input.split("/")
+        problem_folder=filename[0]+"/"+filename[1]+"/"
+      
+        #Update the initial topography
+        #Use the coordinates from the original dem file
+        xi=int(np.shape(model.recGrid.rectX)[0]/model.recGrid.nx)
+        yi=int(np.shape(model.recGrid.rectY)[0]/model.recGrid.ny)
+        #And put the demfile on a grid we can manipulate easily
+        elev=np.reshape(model.recGrid.rectZ,(xi,yi))
+        
+        #Apply the estimatation of the initial topography
+        
+     
+
+
+        self.process_inittopo(inittopo_vec, groundtruth_topo, synthetic_initialtopo) # 
+
+        #-------------------------------------------------------------------------------
 
         # Adjust precipitation values based on given parameter
         #print(input_vector[0:rain_regiontime] )
@@ -1521,10 +1590,116 @@ def main():
 
         erodep_coords = np.array([[42,10],[39,8],[75,51],[59,13],[40,5],[6,20],[14,66],[4,40],[72,73],[46,64]])  # need to hand pick given your problem
 
+
+    elif problem == 3: #this will have region and time rainfall of Problem 1 PLUS initial topo inference - estimation
+        problemfolder = 'Examples/etopo_extended/'
+        xmlinput = problemfolder + 'etopo.xml'
+        simtime = 1000000
+        resolu_factor = 1
+
+        #true_parameter_vec = np.loadtxt(problemfolder + 'data/true_values.txt')
+        likelihood_sediment = True
+
+
+        real_rain = 1.5 #m/a
+        real_erod = 5.e-6 
+        m = 0.5  #Stream flow parameters
+        n = 1 #
+        real_cmarine = 5.e-1 # Marine diffusion coefficient [m2/a] -->
+        real_caerial = 8.e-1 #aerial diffusion
+
+        rain_min = 0.0
+        rain_max = 3.0 
+
+        # assume 4 regions and 4 time scales
+
+        rain_regiongrid = 1  # how many regions in grid format 
+        rain_timescale = 4  # to show climate change 
+
+        rain_minlimits = np.repeat(rain_min, rain_regiongrid*rain_timescale)
+        rain_maxlimits = np.repeat(rain_max, rain_regiongrid*rain_timescale)
+
+        #----------------------------------------InitTOPO
+
+        inittopo_gridlen = 20
+        inittopo_gridwidth = 20
+
+
+        len_grid = 4 
+        wid_grid = 3  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        inittopo_minlimits = np.repeat( -2500  , inittopo_gridlen*inittopo_gridwidth)
+        inittopo_maxlimits = np.repeat( 2500 , inittopo_gridlen*inittopo_gridwidth)
+
+
+
+
+
+
+
+        #--------------------------------------------------------
+
+        minlimits_others = [4.e-6, 0, 0, 0,0, 0, 0, 0, 0, 0]  # make some extra space for future param (last 5)
+        maxlimits_others = [6.e-6, 1, 2, 1,1, 1, 1, 1, 1, 1]
+
+        # need to read file matrix of n x m that defines the course grid of initial topo. This is generated by final
+        # topo ground-truth assuming that the shape of the initial top is similar to final one. 
+
+
+
+        minlimits_vec = np.append(rain_minlimits,minlimits_others,inittopo_minlimits)
+
+        maxlimits_vec = np.append(rain_maxlimits,maxlimits_others,inittopo_maxlimits)
+
+        print(maxlimits_vec, ' maxlimits ')
+
+
+
+
+
+
+           ## hence, for 4 regions of rain and 1 erod, plus other free parameters (p1, p2) [rain_reg1, rain_reg2, rain_reg3, rain_reg4, erod, p1, p2 ]
+                #if you want to freeze a parameter, keep max and min limits the same
+             
+                
+
+        #maxlimits_vec = [3.0,7.e-6, 2, 2,  0.7, 1.0]  
+        #minlimits_vec = [0.0 ,3.e-6, 0, 0, 0.3, 0.6 ]   
+        vec_parameters = np.random.uniform(minlimits_vec, maxlimits_vec) #  draw intial values for each of the free parameters
+
+
+        true_parameter_vec = vec_parameters # just as place value for now, true parameters is not used for plotting 
+
+    
+        stepsize_ratio  = 0.1 #   you can have different ratio values for different parameters depending on the problem. Its safe to use one value for now
+
+        stepratio_vec =  np.repeat(stepsize_ratio, vec_parameters.size) 
+        num_param = vec_parameters.size
+
+        print(vec_parameters) 
+
+        erodep_coords = np.array([[42,10],[39,8],[75,51],[59,13],[40,5],[6,20],[14,66],[4,40],[72,73],[46,64]])  # need to hand pick given your problem
+
+
               
 
 
-    elif problem == 3:
+    elif problem == 4:
         problemfolder = 'Examples/tasmania/'
         xmlinput = problemfolder + 'tasmania.xml'
         simtime = 1000000
@@ -1565,7 +1740,7 @@ def main():
             
             return
 
-    elif problem == 4:
+    elif problem == 5:
         problemfolder = 'Examples/mountain/'
         xmlinput = problemfolder + 'mountain.xml'
         simtime = 1000000
@@ -1626,7 +1801,7 @@ def main():
             return
 
 
-    elif problem == 5:  # @ Nathan - update this section
+    elif problem == 6:  # @ Nathan - update this section
         problemfolder = 'Examples/PNG/'
         xmlinput = problemfolder + 'png.xml'
         simtime = 10000 # need to verify @Nathan
