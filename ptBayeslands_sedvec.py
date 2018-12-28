@@ -47,19 +47,26 @@ from plotly.offline.offline import _plot_html
 import pandas
 import argparse
 
+import pandas as pd
+import seaborn as sns
+
+
   
 from scipy.ndimage import filters 
 
+import scipy.ndimage as ndimage
+
+from scipy.ndimage import gaussian_filter
 
 #Initialise and parse inputs
 parser=argparse.ArgumentParser(description='PTBayeslands modelling')
 
-parser.add_argument('-p','--problem', help='Problem Number 1-crater-fast,2-crater,3-etopo-fast,4-etopo,5-null,6-mountain', required=True, dest="problem",type=int)
+parser.add_argument('-p','--problem', help='Problem Number 1-crater-fast,2-crater,3-etopo-fast,4-etopo,5-null,6-mountain', required=True,   dest="problem",type=int)
 parser.add_argument('-s','--samples', help='Number of samples', default=10000, dest="samples",type=int)
-parser.add_argument('-r','--replicas', help='Number of chains/replicas, best to have one per availble core/cpu', default=2,dest="num_chains",type=int)
+parser.add_argument('-r','--replicas', help='Number of chains/replicas, best to have one per availble core/cpu', default=10,dest="num_chains",type=int)
 parser.add_argument('-t','--temperature', help='Demoninator to determine Max Temperature of chains (MT=no.chains*t) ', default=1,dest="mt_val",type=int)
-parser.add_argument('-swap','--swap', help='Swap Ratio', dest="swap_ratio",default=0.1,type=float)
-parser.add_argument('-b','--burn', help='How many samples to discard before determing posteriors', dest="burn_in",default=0.1,type=float)
+parser.add_argument('-swap','--swap', help='Swap Ratio', dest="swap_ratio",default=0.02,type=float)
+parser.add_argument('-b','--burn', help='How many samples to discard before determing posteriors', dest="burn_in",default=0.25,type=float)
 parser.add_argument('-pt','--ptsamples', help='Ratio of PT vs straight MCMC samples to run', dest="pt_samples",default=0.5,type=float)
 
 args = parser.parse_args()
@@ -153,7 +160,7 @@ class ptReplica(multiprocessing.Process):
         dzreg = np.reshape(dzi,(ny,nx))
         return zreg,dzreg
 
-    def run_badlands_nathan(self, input_vector):
+    def run_badlands_nathancode(self, input_vector):
         #Runs a badlands model with the specified inputs
 
         #Create a badlands model instance
@@ -178,7 +185,9 @@ class ptReplica(multiprocessing.Process):
         #elev_updated=filters.gaussian_filter(elev,input_vector[0]) #+1*input_vector[1]
         elev_updated=filters.gaussian_filter(elev,input_vector[0]) + self.simtime*input_vector[1]/1000
         print("uplifting by ",self.simtime*input_vector[1]/1000," m")
-        #plt.imshow(elev_updated)
+        plt.imshow(elev_updated)
+
+        print(elev_updated.shape, ' elev_updated.shape')
         #plt.savefig(problem_folder+str(self.run_nb)+'/fig_'+str(round(input_vector[0],1))+'_off_'+str(round(input_vector[1],1))+'.png')
         
         ##METHOD 2
@@ -279,43 +288,94 @@ class ptReplica(multiprocessing.Process):
         
         return elev_vec, erodep_vec, erodep_pts_vec
 
-    def process_inittopo(self, inittopo_vec, groundtruth_topo, synthetic_initialtopo):
 
-        length = groundtruth_topo.shape[0]
-        width = groundtruth_topo.shape[1]
+    def plot3d_plotly(self, zData, fname):
+
+     
+        zmin =  zData.min() 
+        zmax =  zData.max()
+
+        tickvals= [0,50,75,-50]
+        height=1000
+        width=1000
+        title='Topography'
+        resolu_factor = 1
+
+        xx = (np.linspace(0, zData.shape[0]* resolu_factor, num=zData.shape[0]/10 )) 
+        yy = (np.linspace(0, zData.shape[1] * resolu_factor, num=zData.shape[1]/10 )) 
+
+        xx = np.around(xx, decimals=0)
+        yy = np.around(yy, decimals=0)
+        print (xx,' xx')
+        print (yy,' yy')
+
+        # range = [0,zData.shape[0]* self.resolu_factor]
+        #range = [0,zData.shape[1]* self.resolu_factor],
+
+        data = Data([Surface(x= zData.shape[0] , y= zData.shape[1] , z=zData, colorscale='YIGnBu')])
+
+        layout = Layout(title='Predicted Topography' , autosize=True, width=width, height=height,scene=Scene(
+                    zaxis=ZAxis(title = ' Elev.(m) ', range=[zmin,zmax], autorange=False, nticks=6, gridcolor='rgb(255, 255, 255)',
+                                gridwidth=2, zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
+                    xaxis=XAxis(title = ' x ',  tickvals= xx,      gridcolor='rgb(255, 255, 255)', gridwidth=2,
+                                zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
+                    yaxis=YAxis(title = ' y ', tickvals= yy,    gridcolor='rgb(255, 255, 255)', gridwidth=2,
+                                zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
+                    bgcolor="rgb(244, 244, 248)"
+                )
+            )
+
+        fig = Figure(data=data, layout=layout) 
+        graph = plotly.offline.plot(fig, auto_open=False, output_type='file', filename= self.filename +  '/posterior/'+fname+ str(int(self.temperature*10))+'.html', validate=False)
 
 
-        #length  = 9 
-        #width = 7 
+ 
+ 
 
-        #x = np.random.rand(length,width)
+
+    def process_inittopo(self, inittopo_vec):
+
+        length = self.real_elev.shape[0]
+        width = self.real_elev.shape[1]
+
+
+        #len_grid = int(groundtruth_elev.shape[0]/inittopo_gridlen)  # take care of left over
+        #wid_grid = int(groundtruth_elev.shape[1]/inittopo_gridwidth)   # take care of left over
+
+ 
 
         len_grid = self.len_grid
         wid_grid = self.wid_grid
 
-        scale_factor = np.random.rand(len_grid,wid_grid) *100
-
+        
         sub_gridlen = int(length/len_grid)
         sub_gridwidth = int(width/wid_grid) 
         new_length =len_grid * sub_gridlen 
         new_width =wid_grid *  sub_gridwidth
 
-        reconstructed_topo = groundtruth_topo  # to define the size
+        reconstructed_topo = self.real_elev.copy()  # to define the size
+        groundtruth_topo = self.real_elev.copy()
+
+        print(self.real_elev.shape, '   self.real_elev.shape')  
 
 
+        scale_factor = np.reshape(inittopo_vec, (sub_gridlen, -1)   )#np.random.rand(len_grid,wid_grid)
+ 
+ 
 
-        #print(new_width, new_length)
-  
-        #x = x[0:new_length,0:new_width]
+        for l in range(0,sub_gridlen):
+            for w in range(0,sub_gridwidth): 
+                temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ] 
+                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += ( temp * scale_factor[l,w])
 
-        print(groundtruth_topo. 'groun_truth')
+          
+        #self.plot3d_plotly(reconstructed_topo, 'initrecon_')
+ 
+        reconstructed_topo = gaussian_filter(reconstructed_topo, sigma=1) # change sigma to higher values if needed 
 
-        for l in range(0,len_grid):
-            for w in range(0,wid_grid): 
-                #print(l * sub_gridlen, (l+1) * sub_gridlen, w * sub_gridwidth, (w+1) * sub_gridwidth ) 
-                reconstructed_topo[l * sub_gridlen:(l+1) * sub_gridlen, w * sub_gridwidth: (w+1) * sub_gridwidth] = groundtruth_topo[l * sub_gridlen:(l+1) * sub_gridlen, w * sub_gridwidth: (w+1) * sub_gridwidth  ] * scale_factor[l,w]
 
-        print(reconstructed_topo)
+        #self.plot3d_plotly(reconstructed_topo, 'smooth_')
+
 
         return reconstructed_topo
 
@@ -349,13 +409,29 @@ class ptReplica(multiprocessing.Process):
         elev=np.reshape(model.recGrid.rectZ,(xi,yi))
         
         #Apply the estimatation of the initial topography
+
         
      
 
 
-        self.process_inittopo(inittopo_vec, groundtruth_topo, synthetic_initialtopo) # 
+        inittopo_estimate = self.process_inittopo(inittopo_vec) # 
+
+        print(inittopo_estimate.shape, ' shape - should be 120 134')
+
+        inittopo_estimate = inittopo_estimate[0:120, 0:134]  # bug fix but not good fix - temp @
 
         #-------------------------------------------------------------------------------
+
+        ##end of ESTIMATION
+        
+        
+        #Put it back into 'Badlands' format and then re-load the model
+        elev_frame=pandas.DataFrame({'X':model.recGrid.rectX,'Y':model.recGrid.rectY,'Z':inittopo_estimate.flatten()})
+        filename=problem_folder+str(self.run_nb)+'/demfile_'+str(self.temperature)+'_demfile.csv'
+        elev_frame.to_csv(filename,columns=['X', 'Y', 'Z'], sep=' ', index=False ,header=0,)
+        model.input.demfile=filename
+        model.build_mesh(model.input.demfile, verbose=False)
+        
 
         # Adjust precipitation values based on given parameter
         #print(input_vector[0:rain_regiontime] )
@@ -706,7 +782,7 @@ class ptReplica(multiprocessing.Process):
 
 class ParallelTempering:
 
-    def __init__(self, vec_parameters, rain_region, rain_time, num_chains, maxtemp,NumSample,swap_interval, fname, realvalues_vec, num_param,  real_elev, erodep_pts, erodep_coords, simtime, siminterval, resolu_factor, run_nb, inputxml):
+    def __init__(self, vec_parameters, rain_region, rain_time,  len_grid,  wid_grid, num_chains, maxtemp,NumSample,swap_interval, fname, realvalues_vec, num_param,  real_elev, erodep_pts, erodep_coords, simtime, siminterval, resolu_factor, run_nb, inputxml):
 
 
         self.swap_interval = swap_interval
@@ -746,6 +822,8 @@ class ParallelTempering:
 
         self.rain_region = rain_region  
         self.rain_time = rain_time
+        self.len_grid = len_grid
+        self.wid_grid = wid_grid
 
 
     def default_beta_ladder(self, ndim, ntemps, Tmax): #https://github.com/konqr/ptemcee/blob/master/ptemcee/sampler.py
@@ -856,8 +934,9 @@ class ParallelTempering:
         self.assign_temperatures()
         
         for i in xrange(0, self.num_chains):
-            self.chains.append(ptReplica( self.num_param, self.vec_parameters, self.rain_region, self.rain_time, minlimits_vec, maxlimits_vec, stepratio_vec,  check_likelihood_sed ,self.swap_interval, self.sim_interval,   self.simtime, self.NumSamples, self.real_elev,   self.real_erodep_pts, self.erodep_coords, self.folder, self.xmlinput,  self.run_nb,self.temperatures[i], self.parameter_queue[i],self.event[i], self.wait_chain[i],burn_in))
-            
+            self.chains.append(ptReplica( self.num_param, self.vec_parameters, self.rain_region, self.rain_time, self.len_grid, self.wid_grid, minlimits_vec, maxlimits_vec, stepratio_vec,  check_likelihood_sed ,self.swap_interval, self.sim_interval,   self.simtime, self.NumSamples, self.real_elev,   self.real_erodep_pts, self.erodep_coords, self.folder, self.xmlinput,  self.run_nb,self.temperatures[i], self.parameter_queue[i],self.event[i], self.wait_chain[i],burn_in))
+                                     #self,  num_param, vec_parameters, rain_region, rain_time, len_grid, wid_grid, minlimits_vec, maxlimits_vec, stepratio_vec,   check_likelihood_sed ,  swap_interval, sim_interval, simtime, samples, real_elev,  real_erodep_pts, erodep_coords, filename, xmlinput,  run_nb, tempr, parameter_queue,event , main_proc,   burn_in):
+
             
     def swap_procedure(self, parameter_queue_1, parameter_queue_2):
         #print (parameter_queue_2, ", param1:",parameter_queue_1)
@@ -1467,6 +1546,14 @@ def main():
     if problem == 1: #this is CM-extended
         problemfolder = 'Examples/etopo/'
         xmlinput = problemfolder + 'etopo.xml'
+
+
+
+        datapath = problemfolder + 'data/final_elev.txt'
+        groundtruth_elev = np.loadtxt(datapath)
+        groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
+        groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+
         simtime = 1000000
         resolu_factor = 1
 
@@ -1526,6 +1613,13 @@ def main():
     elif problem == 2: #this will have region and time rainfall of Problem 1
         problemfolder = 'Examples/etopo_extended/'
         xmlinput = problemfolder + 'etopo.xml'
+
+
+        datapath = problemfolder + 'data/final_elev.txt'
+        groundtruth_elev = np.loadtxt(datapath)
+        groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
+        groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+
         simtime = 1000000
         resolu_factor = 1
 
@@ -1594,6 +1688,13 @@ def main():
     elif problem == 3: #this will have region and time rainfall of Problem 1 PLUS initial topo inference - estimation
         problemfolder = 'Examples/etopo_extended/'
         xmlinput = problemfolder + 'etopo.xml'
+
+
+        datapath = problemfolder + 'data/final_elev.txt'
+        groundtruth_elev = np.loadtxt(datapath)
+        groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
+        groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+
         simtime = 1000000
         resolu_factor = 1
 
@@ -1621,36 +1722,19 @@ def main():
 
         #----------------------------------------InitTOPO
 
-        inittopo_gridlen = 20
-        inittopo_gridwidth = 20
+        inittopo_gridlen = 10
+        inittopo_gridwidth = 10
 
 
-        len_grid = 4 
-        wid_grid = 3  
+        len_grid = int(groundtruth_elev.shape[0]/inittopo_gridlen)  # take care of left over
+        wid_grid = int(groundtruth_elev.shape[1]/inittopo_gridwidth)   # take care of left over
+
+        print(len_grid,  wid_grid , '    ********************    ') 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        inittopo_minlimits = np.repeat( -2500  , inittopo_gridlen*inittopo_gridwidth)
-        inittopo_maxlimits = np.repeat( 2500 , inittopo_gridlen*inittopo_gridwidth)
-
-
-
-
-
-
+        inittopo_minlimits = np.repeat( 0 , inittopo_gridlen*inittopo_gridwidth)
+        inittopo_maxlimits = np.repeat( 1, inittopo_gridlen*inittopo_gridwidth)
+ 
 
         #--------------------------------------------------------
 
@@ -1662,11 +1746,16 @@ def main():
 
 
 
-        minlimits_vec = np.append(rain_minlimits,minlimits_others,inittopo_minlimits)
+        temp_vec = np.append(rain_minlimits,minlimits_others)#,inittopo_minlimits)
+        minlimits_vec = np.append(temp_vec, inittopo_minlimits)
 
-        maxlimits_vec = np.append(rain_maxlimits,maxlimits_others,inittopo_maxlimits)
+        temp_vec = np.append(rain_maxlimits,maxlimits_others)#,inittopo_maxlimits)
+        maxlimits_vec = np.append(temp_vec, inittopo_maxlimits)
+
 
         print(maxlimits_vec, ' maxlimits ')
+
+        print(minlimits_vec, ' maxlimits ')
 
 
 
@@ -1702,6 +1791,13 @@ def main():
     elif problem == 4:
         problemfolder = 'Examples/tasmania/'
         xmlinput = problemfolder + 'tasmania.xml'
+
+
+        datapath = problemfolder + 'data/final_elev.txt'
+        groundtruth_elev = np.loadtxt(datapath)
+        groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
+        groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+
         simtime = 1000000
         resolu_factor = 1
 
@@ -1743,6 +1839,13 @@ def main():
     elif problem == 5:
         problemfolder = 'Examples/mountain/'
         xmlinput = problemfolder + 'mountain.xml'
+
+
+        datapath = problemfolder + 'data/final_elev.txt'
+        groundtruth_elev = np.loadtxt(datapath)
+        groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
+        groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+
         simtime = 1000000
         resolu_factor = 1
         true_parameter_vec = np.loadtxt(problemfolder + 'data/true_values.txt')
@@ -1804,6 +1907,13 @@ def main():
     elif problem == 6:  # @ Nathan - update this section
         problemfolder = 'Examples/PNG/'
         xmlinput = problemfolder + 'png.xml'
+
+
+        datapath = problemfolder + 'data/final_elev.txt'
+        groundtruth_elev = np.loadtxt(datapath)
+        groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
+        groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+
         simtime = 10000 # need to verify @Nathan
         resolu_factor = 1
         true_parameter_vec = np.loadtxt(problemfolder + 'data/true_values.txt')
@@ -1866,10 +1976,6 @@ def main():
     else:
         print('choose some problem  ')
 
-    datapath = problemfolder + 'data/final_elev.txt'
-    groundtruth_elev = np.loadtxt(datapath)
-    groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
-    groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
 
     fname = ""
     run_nb = 0
@@ -1914,7 +2020,7 @@ def main():
     #-------------------------------------------------------------------------------------
     #Create A a Patratellel Tempring object instance 
     #-------------------------------------------------------------------------------------
-    pt = ParallelTempering(  vec_parameters, rain_regiongrid, rain_timescale, num_chains, maxtemp, samples,swap_interval,fname, true_parameter_vec, num_param  ,  groundtruth_elev,  groundtruth_erodep_pts , erodep_coords, simtime, sim_interval, resolu_factor, run_nb_str, xmlinput)
+    pt = ParallelTempering(  vec_parameters, rain_regiongrid, rain_timescale, len_grid,  wid_grid, num_chains, maxtemp, samples,swap_interval,fname, true_parameter_vec, num_param  ,  groundtruth_elev,  groundtruth_erodep_pts , erodep_coords, simtime, sim_interval, resolu_factor, run_nb_str, xmlinput)
     
     #-------------------------------------------------------------------------------------
     # intialize the MCMC chains
