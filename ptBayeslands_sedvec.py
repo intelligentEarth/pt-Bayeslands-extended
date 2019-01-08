@@ -96,7 +96,7 @@ class ptReplica(multiprocessing.Process):
         self.signal_main = main_proc
         self.temperature = tempr
         self.swap_interval = swap_interval
-        self.filename = filename
+        self.folder = filename
         self.input = xmlinput  
         self.simtime = simtime
         self.samples = samples
@@ -224,11 +224,12 @@ class ptReplica(multiprocessing.Process):
         
         #Put it back into 'Badlands' format and then re-load the model
         elev_frame=pandas.DataFrame({'X':model.recGrid.rectX,'Y':model.recGrid.rectY,'Z':elev_updated.flatten()})
-        filename=problem_folder+str(self.run_nb)+'/demfile_'+str(self.temperature)+'_demfile.csv'
+        filename=problem_folder+str(self.run_nb)+'/demfile_'+str(int(self.temperature*10))+'_demfile.csv'
         elev_frame.to_csv(filename,columns=['X', 'Y', 'Z'], sep=' ', index=False ,header=0,)
         model.input.demfile=filename
         model.build_mesh(model.input.demfile, verbose=False)
         
+        #str(int(self.temperature*10))
         
         # Adjust erodibility based on given parameter
         #model.input.SPLero = input_vector[1] 
@@ -254,7 +255,7 @@ class ptReplica(multiprocessing.Process):
 
             #Adjust the parameters by our value k, and save them out
             newtect = pandas.DataFrame(tectonicValues*k)
-            newFile = problem_folder+str(k)+str(self.temperature)+".csv"
+            newFile = problem_folder+str(k)+str(int(self.temperature*10))+".csv"
             #print(newtect[0][1000],newtect.shape)
             newtect.to_csv(newFile,index=False,header=False)
             
@@ -326,7 +327,7 @@ class ptReplica(multiprocessing.Process):
             )
 
         fig = Figure(data=data, layout=layout) 
-        graph = plotly.offline.plot(fig, auto_open=False, output_type='file', filename= self.filename +  '/posterior/'+fname+ str(int(self.temperature*10))+'.html', validate=False)
+        graph = plotly.offline.plot(fig, auto_open=False, output_type='file', filename= self.folder +  '/posterior/'+fname+ str(int(self.temperature*10))+'.html', validate=False)
 
 
  
@@ -418,6 +419,8 @@ class ptReplica(multiprocessing.Process):
 
         print(inittopo_estimate.shape, ' shape - should be 120 134')
 
+        print(elev.shape, ' elev from file shape - should be 120 134')
+
         inittopo_estimate = inittopo_estimate[0:120, 0:134]  # bug fix but not good fix - temp @
 
         #-------------------------------------------------------------------------------
@@ -427,7 +430,7 @@ class ptReplica(multiprocessing.Process):
         
         #Put it back into 'Badlands' format and then re-load the model
         elev_frame=pandas.DataFrame({'X':model.recGrid.rectX,'Y':model.recGrid.rectY,'Z':inittopo_estimate.flatten()})
-        filename=problem_folder+str(self.run_nb)+'/demfile_'+str(self.temperature)+'_demfile.csv'
+        filename=problem_folder+str(self.run_nb)+'/demfile_'+ str(int(self.temperature*10)) +'_demfile.csv'
         elev_frame.to_csv(filename,columns=['X', 'Y', 'Z'], sep=' ', index=False ,header=0,)
         model.input.demfile=filename
         model.build_mesh(model.input.demfile, verbose=False)
@@ -588,7 +591,7 @@ class ptReplica(multiprocessing.Process):
 
         #save
 
-        with file(('%s/experiment_setting.txt' % (self.filename)),'a') as outfile:
+        with file(('%s/experiment_setting.txt' % (self.folder)),'a') as outfile:
             outfile.write('\nsamples_per_chain:,{0}'.format(self.samples))
             outfile.write('\nburnin:,{0}'.format(self.burn_in))
             outfile.write('\nnum params:,{0}'.format(self.num_param))
@@ -738,33 +741,33 @@ class ptReplica(multiprocessing.Process):
         self.parameter_queue.put(param)
 
         #Save out the data for each chain
-        file_name = self.filename+'/posterior/pos_parameters/chain_'+ str(self.temperature)+ '.txt'
+        file_name = self.folder+'/posterior/pos_parameters/chain_'+ str(self.temperature)+ '.txt'
         np.savetxt(file_name,pos_param ) 
 
-        file_name = self.filename+'/posterior/predicted_topo/chain_xslice_'+ str(self.temperature)+ '.txt'
+        file_name = self.folder+'/posterior/predicted_topo/chain_xslice_'+ str(self.temperature)+ '.txt'
         np.savetxt(file_name, list_xslicepred )
 
-        file_name = self.filename+'/posterior/predicted_topo/chain_yslice_'+ str(self.temperature)+ '.txt'
+        file_name = self.folder+'/posterior/predicted_topo/chain_yslice_'+ str(self.temperature)+ '.txt'
         np.savetxt(file_name, list_yslicepred )
 
-        file_name = self.filename+'/posterior/pos_likelihood/chain_'+ str(self.temperature)+ '.txt'
+        file_name = self.folder+'/posterior/pos_likelihood/chain_'+ str(self.temperature)+ '.txt'
         np.savetxt(file_name,likeh_list, fmt='%1.2f')
 
-        file_name = self.filename + '/posterior/accept_list/chain_' + str(self.temperature) + '_accept.txt'
+        file_name = self.folder + '/posterior/accept_list/chain_' + str(self.temperature) + '_accept.txt'
         np.savetxt(file_name, [accept_ratio], fmt='%1.2f')
 
-        file_name = self.filename + '/posterior/accept_list/chain_' + str(self.temperature) + '.txt'
+        file_name = self.folder+ '/posterior/accept_list/chain_' + str(self.temperature) + '.txt'
         np.savetxt(file_name, accept_list, fmt='%1.2f') 
 
-        file_name = self.filename+'/posterior/rmse_elev_chain_'+ str(self.temperature)+ '.txt'
+        file_name = self.folder+'/posterior/rmse_elev_chain_'+ str(self.temperature)+ '.txt'
         np.savetxt(file_name, rmse_elev, fmt='%1.2f')       
     
-        file_name = self.filename+'/posterior/rmse_erodep_chain_'+ str(self.temperature)+ '.txt'
+        file_name = self.folder+'/posterior/rmse_erodep_chain_'+ str(self.temperature)+ '.txt'
         np.savetxt(file_name, rmse_erodep, fmt='%1.2f')
 
 
         for s in range(self.sim_interval.size):  
-            file_name = self.filename + '/posterior/predicted_erodep/chain_' + str(self.sim_interval[s]) + '_' + str(self.temperature) + '.txt'
+            file_name = self.folder + '/posterior/predicted_erodep/chain_' + str(self.sim_interval[s]) + '_' + str(self.temperature) + '.txt'
             np.savetxt(file_name, list_erodep_time[:,s, :] , fmt='%.2f') 
 
         for k, v in sum_elev.items():
@@ -774,7 +777,7 @@ class ptReplica(multiprocessing.Process):
             sum_erodep_pts[k] = np.divide(sum_erodep_pts[k], num_div)
             mean_pred_erodep_pnts = sum_erodep_pts[k]
 
-            file_name = self.filename + '/posterior/predicted_topo/chain_' + str(k) + '_' + str(self.temperature) + '.txt'
+            file_name = self.folder + '/posterior/predicted_topo/chain_' + str(k) + '_' + str(self.temperature) + '.txt'
             np.savetxt(file_name, mean_pred_elevation, fmt='%.2f')
 
         self.signal_main.set()
@@ -1085,9 +1088,139 @@ class ParallelTempering:
     
 
         swap_perc = self.num_swap*100/self.total_swap_proposals  
-            
+
+        rain_regiontime = self.rain_region * self.rain_time # number of parameters for rain based on  region and time  
+        geoparam  = rain_regiontime+10  # note 10 parameter space is for erod, c-marine etc etc, some extra space ( taking out time dependent rainfall)
+
+        print(pos_param.shape, ' pos_param shape')
+        mean_pos = pos_param.mean(axis=1) 
+
+        percentile_95th = np.percentile(pos_param, 95, axis=1) 
+
+        percentile_5th = np.percentile(pos_param, 5, axis=1) 
+
+        init_topo_mean = self.process_inittopo(mean_pos[geoparam:])
+
+        init_topo_95th = self.process_inittopo(percentile_95th[geoparam:])
+
+        init_topo_5th = self.process_inittopo(percentile_5th[geoparam:])
+
+
+        self.plot3d_plotly(init_topo_mean, 'mean_init')
+        self.plot3d_plotly(init_topo_95th, 'percentile95_init')
+        self.plot3d_plotly(init_topo_5th, 'percentile5_init')
+
+
+        #   cut the slice in the middle to show cross section of init topo with uncertainity
+        synthetic_initopo = self.get_synthetic_initopo()
+
+        print(synthetic_initopo, 'synthetic_initopo')
+
+        print(synthetic_initopo.shape, ' synthetic_initopo shape')
+
+        print(init_topo_mean.shape, ' init topo mean shape')
+
+        xmid = int(synthetic_initopo.shape[0]/2) 
+        inittopo_real = synthetic_initopo[xmid, :]  # ground-truth init topo mid (synthetic)
+        lower_mid = init_topo_5th[xmid, :]
+        higher_mid = init_topo_95th[xmid, :]
+        mean_mid = init_topo_mean[xmid, :]
+        x = np.linspace(0, mean_mid.size * self.resolu_factor, num=mean_mid.size)
+        self.cross_section(x, mean_mid, inittopo_real, lower_mid, higher_mid, 'init_x_ymid_cross')
+
+
 
         return (pos_param,likelihood_rep, accept_list,   combined_erodep,  pred_topofinal, swap_perc, accept,  rmse_elev, rmse_erodep)
+
+
+    def plot3d_plotly(self, zData, fname): # same method from previous class - ptReplica
+
+     
+        zmin =  zData.min() 
+        zmax =  zData.max()
+
+        tickvals= [0,50,75,-50]
+        height=1000
+        width=1000
+        #title='Topography'
+        resolu_factor = 1
+
+        xx = (np.linspace(0, zData.shape[0]* resolu_factor, num=zData.shape[0]/10 )) 
+        yy = (np.linspace(0, zData.shape[1] * resolu_factor, num=zData.shape[1]/10 )) 
+
+        xx = np.around(xx, decimals=0)
+        yy = np.around(yy, decimals=0)
+        print (xx,' xx')
+        print (yy,' yy')
+
+        # range = [0,zData.shape[0]* self.resolu_factor]
+        #range = [0,zData.shape[1]* self.resolu_factor],
+
+        data = Data([Surface(x= zData.shape[0] , y= zData.shape[1] , z=zData, colorscale='YIGnBu')])
+
+        layout = Layout(title='' , autosize=True, width=width, height=height,scene=Scene(
+                    zaxis=ZAxis(title = ' Elev.(m) ', range=[zmin,zmax], autorange=False, nticks=6, gridcolor='rgb(255, 255, 255)',
+                                gridwidth=2, zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
+                    xaxis=XAxis(title = ' x ',  tickvals= xx,      gridcolor='rgb(255, 255, 255)', gridwidth=2,
+                                zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
+                    yaxis=YAxis(title = ' y ', tickvals= yy,    gridcolor='rgb(255, 255, 255)', gridwidth=2,
+                                zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
+                    bgcolor="rgb(244, 244, 248)"
+                )
+            )
+
+        fig = Figure(data=data, layout=layout) 
+        graph = plotly.offline.plot(fig, auto_open=False, output_type='file', filename= self.folder +  '/recons_initialtopo/'+fname+'_.html', validate=False)
+
+
+     
+     
+
+
+    def process_inittopo(self, inittopo_vec):  # same method from previous class ptReplica
+
+        length = self.real_elev.shape[0]
+        width = self.real_elev.shape[1] 
+
+        len_grid = self.len_grid
+        wid_grid = self.wid_grid
+
+        
+        sub_gridlen = int(length/len_grid)
+        sub_gridwidth = int(width/wid_grid) 
+        new_length =len_grid * sub_gridlen 
+        new_width =wid_grid *  sub_gridwidth
+
+        reconstructed_topo = self.real_elev.copy()  # to define the size
+        groundtruth_topo = self.real_elev.copy()
+
+        print(self.real_elev.shape, '   self.real_elev.shape')  
+
+        print(inittopo_vec , ' vec ')
+
+        print(inittopo_vec.shape, ' shape ')
+
+
+        scale_factor = np.reshape(inittopo_vec, (sub_gridlen, -1)   )#np.random.rand(len_grid,wid_grid)
+
+
+
+        for l in range(0,sub_gridlen):
+            for w in range(0,sub_gridwidth): 
+                temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ] 
+                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += ( temp * scale_factor[l,w])
+
+          
+        #self.plot3d_plotly(reconstructed_topo, 'initrecon_')
+
+        reconstructed_topo = gaussian_filter(reconstructed_topo, sigma=1) # change sigma to higher values if needed 
+
+
+        #self.plot3d_plotly(reconstructed_topo, 'smooth_')
+
+
+        return reconstructed_topo
+
 
     def view_crosssection_uncertainity(self,  list_xslice, list_yslice):
         print ('list_xslice', list_xslice.shape)
@@ -1121,30 +1254,11 @@ class ParallelTempering:
 
         #ax.set_xlim(-width,len(ind)+width)
 
-        size = 18
+        self.cross_section(x, x_ymid_mean, x_ymid_real, x_ymid_5th, x_ymid_95th, 'x_ymid_cross')
+        self.cross_section(x_, y_xmid_mean, y_xmid_real, y_xmid_5th, y_xmid_95th, 'y_xmid_cross')
 
-        plt.tick_params(labelsize=size)
-        params = {'legend.fontsize': size, 'legend.handlelength': 2}
-        plt.rcParams.update(params)
-        plt.plot(x, x_ymid_real, label='ground truth') 
-        plt.plot(x, x_ymid_mean, label='model pred.')
-        #plt.plot(x, x_ymid_5th, label='pred.(5th percen.)')
-        #plt.plot(x, x_ymid_95th, label='pred.(95th percen.)')
 
-        plt.fill_between(x, x_ymid_5th , x_ymid_95th, facecolor='g', alpha=0.4)
-        #plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-        plt.legend(loc='best') 
-        #plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05), ncol=3, fancybox=True, shadow=True)
-
-        plt.title("Topography prediction (cross section)  ", fontsize = size)
-        plt.xlabel(' Distance (km)  ', fontsize = size)
-        plt.ylabel(' Height (m)', fontsize = size)
-        plt.tight_layout()
-          
-        plt.savefig(self.folder+'/x_ymid_opt.pdf')
-        plt.clf()
-
-        plt.tick_params(labelsize=size)
+        '''plt.tick_params(labelsize=size)
         params = {'legend.fontsize': size, 'legend.handlelength': 2}
         plt.rcParams.update(params)
         plt.plot(x_, y_xmid_real, label='ground truth') 
@@ -1165,7 +1279,46 @@ class ParallelTempering:
         plt.savefig(self.folder+'/y_xmid_opt.pdf')
 
 
+        plt.clf()'''
+
+    def cross_section(self, x, real, pred, lower, higher, fname):
+
+        size = 18
+
+        plt.tick_params(labelsize=size)
+        params = {'legend.fontsize': size, 'legend.handlelength': 2}
+        plt.rcParams.update(params)
+        plt.plot(x,  real, label='ground truth') 
+        plt.plot(x, pred, label='model pred.')
+        #plt.plot(x, x_ymid_5th, label='pred.(5th percen.)')
+        #plt.plot(x, x_ymid_95th, label='pred.(95th percen.)')
+
+        plt.fill_between(x, lower , higher, facecolor='g', alpha=0.4)
+        #plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.legend(loc='best') 
+        #plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05), ncol=3, fancybox=True, shadow=True)
+
+        plt.title("Topography  cross section   ", fontsize = size)
+        plt.xlabel(' Distance (km)  ', fontsize = size)
+        plt.ylabel(' Height (m)', fontsize = size)
+        plt.tight_layout()
+          
+        plt.savefig(self.folder+'/'+fname+'.pdf')
         plt.clf()
+
+    def get_synthetic_initopo(self):
+
+        model = badlandsModel() 
+        # Load the XmL input file
+        model.load_xml(str(self.run_nb), self.xmlinput, muted=True) 
+        #Update the initial topography
+        #Use the coordinates from the original dem file
+        xi=int(np.shape(model.recGrid.rectX)[0]/model.recGrid.nx)
+        yi=int(np.shape(model.recGrid.rectY)[0]/model.recGrid.ny)
+        #And put the demfile on a grid we can manipulate easily
+        elev=np.reshape(model.recGrid.rectZ,(xi,yi))
+
+        return elev
 
 
     # Merge different MCMC chains y stacking them on top of each other
@@ -1988,6 +2141,8 @@ def main():
     #fname = ('sampleresults')
 
     make_directory((fname + '/posterior/pos_parameters')) 
+
+    make_directory((fname + '/recons_initialtopo')) 
 
     make_directory((fname + '/pos_plots')) 
     make_directory((fname + '/posterior/predicted_topo'))
