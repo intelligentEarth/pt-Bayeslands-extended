@@ -357,7 +357,7 @@ class ptReplica(multiprocessing.Process):
         reconstructed_topo = self.real_elev.copy()  # to define the size
         groundtruth_topo = self.real_elev.copy()
 
-        print(self.real_elev.shape, '   self.real_elev.shape')  
+       # print(self.real_elev.shape, '   self.real_elev.shape')  
 
 
         scale_factor = np.reshape(inittopo_vec, (sub_gridlen, -1)   )#np.random.rand(len_grid,wid_grid)
@@ -375,7 +375,8 @@ class ptReplica(multiprocessing.Process):
         reconstructed_topo = gaussian_filter(reconstructed_topo, sigma=1) # change sigma to higher values if needed 
 
 
-        #self.plot3d_plotly(reconstructed_topo, 'smooth_')
+        #self.plot3d_plotly(reconstructed_topo, 'smooth_') 
+
 
 
         return reconstructed_topo
@@ -417,12 +418,14 @@ class ptReplica(multiprocessing.Process):
 
         inittopo_estimate = self.process_inittopo(inittopo_vec) # 
 
-        print(inittopo_estimate.shape, ' shape - should be 120 134')
+        #print(inittopo_estimate.shape, ' shape - should be 120 134')
 
-        print(elev.shape, ' elev from file shape - should be 120 134')
+        #print(elev.shape, ' elev from file shape - should be 120 134')
 
-        inittopo_estimate = inittopo_estimate[0:120, 0:134]  # bug fix but not good fix - temp @
 
+        inittopo_estimate = inittopo_estimate[0:  elev.shape[0], 0:  elev.shape[1]]  # bug fix but not good fix - temp @
+
+        
         #-------------------------------------------------------------------------------
 
         ##end of ESTIMATION
@@ -1114,19 +1117,21 @@ class ParallelTempering:
         #   cut the slice in the middle to show cross section of init topo with uncertainity
         synthetic_initopo = self.get_synthetic_initopo()
 
-        print(synthetic_initopo, 'synthetic_initopo')
 
-        print(synthetic_initopo.shape, ' synthetic_initopo shape')
-
-        print(init_topo_mean.shape, ' init topo mean shape')
+        init_topo_mean = init_topo_mean[0:synthetic_initopo.shape[0], 0:synthetic_initopo.shape[1]]  # just to ensure that the size is exact 
+        init_topo_95th = init_topo_95th[0:synthetic_initopo.shape[0], 0:synthetic_initopo.shape[1]]  # just to ensure that the size is exact 
+        init_topo_5th = init_topo_5th[0:synthetic_initopo.shape[0], 0:synthetic_initopo.shape[1]]  # just to ensure that the size is exact 
 
         xmid = int(synthetic_initopo.shape[0]/2) 
-        inittopo_real = synthetic_initopo[xmid, :]  # ground-truth init topo mid (synthetic)
+        inittopo_real = synthetic_initopo[xmid, :]  # ground-truth init topo mid (synthetic) 
+
+
         lower_mid = init_topo_5th[xmid, :]
         higher_mid = init_topo_95th[xmid, :]
         mean_mid = init_topo_mean[xmid, :]
-        x = np.linspace(0, mean_mid.size * self.resolu_factor, num=mean_mid.size)
+        x = np.linspace(0, synthetic_initopo.shape[1] * self.resolu_factor, num= synthetic_initopo.shape[1])
         self.cross_section(x, mean_mid, inittopo_real, lower_mid, higher_mid, 'init_x_ymid_cross')
+
 
 
 
@@ -1216,6 +1221,9 @@ class ParallelTempering:
         reconstructed_topo = gaussian_filter(reconstructed_topo, sigma=1) # change sigma to higher values if needed 
 
 
+        #reconstructed_topo = reconstructed_topo[0:self.real_elev.shape[0], 0:self.real_elev.shape[1]]  # bug fix but not good fix - temp @
+
+
         #self.plot3d_plotly(reconstructed_topo, 'smooth_')
 
 
@@ -1281,7 +1289,7 @@ class ParallelTempering:
 
         plt.clf()'''
 
-    def cross_section(self, x, real, pred, lower, higher, fname):
+    def cross_section(self, x, pred, real, lower, higher, fname):
 
         size = 18
 
