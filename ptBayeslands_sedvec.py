@@ -87,7 +87,7 @@ pt_samples = args.pt_samples
 
 
 class ptReplica(multiprocessing.Process):
-    def __init__(self,  num_param, vec_parameters, rain_region, rain_time, len_grid, wid_grid, minlimits_vec, maxlimits_vec, stepratio_vec,   check_likelihood_sed ,  swap_interval, sim_interval, simtime, samples, real_elev,  real_erodep_pts, erodep_coords, filename, xmlinput,  run_nb, tempr, parameter_queue,event , main_proc,   burn_in):
+    def __init__(self,  num_param, vec_parameters,  inittopo_expertknow, rain_region, rain_time, len_grid, wid_grid, minlimits_vec, maxlimits_vec, stepratio_vec,   check_likelihood_sed ,  swap_interval, sim_interval, simtime, samples, real_elev,  real_erodep_pts, erodep_coords, filename, xmlinput,  run_nb, tempr, parameter_queue,event , main_proc,   burn_in):
 
         multiprocessing.Process.__init__(self)
         self.processID = tempr      
@@ -124,6 +124,7 @@ class ptReplica(multiprocessing.Process):
 
         self.len_grid = len_grid 
         self.wid_grid  = wid_grid# for initial topo grid size 
+        self.inittopo_expertknow =  inittopo_expertknow
 
     def interpolateArray(self, coords=None, z=None, dz=None):
         """
@@ -160,7 +161,7 @@ class ptReplica(multiprocessing.Process):
         dzreg = np.reshape(dzi,(ny,nx))
         return zreg,dzreg
 
-    def run_badlands_nathancode(self, input_vector):
+    '''def run_badlands_nathancode(self, input_vector):
         #Runs a badlands model with the specified inputs
 
         #Create a badlands model instance
@@ -287,7 +288,7 @@ class ptReplica(multiprocessing.Process):
         
 
         
-        return elev_vec, erodep_vec, erodep_pts_vec
+        return elev_vec, erodep_vec, erodep_pts_vec'''
 
 
     def plot3d_plotly(self, zData, fname):
@@ -361,13 +362,22 @@ class ptReplica(multiprocessing.Process):
 
 
         scale_factor = np.reshape(inittopo_vec, (sub_gridlen, -1)   )#np.random.rand(len_grid,wid_grid)
+
+        #self.inittopo_expertknow
  
  
 
         for l in range(0,sub_gridlen):
             for w in range(0,sub_gridwidth): 
-                temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ] 
-                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += ( temp * scale_factor[l,w])
+                temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
+                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += (      ((self.inittopo_expertknow[l,w]*0.80)  + (self.inittopo_expertknow[l,w] * scale_factor[l,w] ) ) )
+
+                #reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += (      ((self.inittopo_expertknow[l,w]*0.70)  + (temp *  1  ) ) )
+
+
+
+
+          
 
           
         #self.plot3d_plotly(reconstructed_topo, 'initrecon_')
@@ -375,7 +385,7 @@ class ptReplica(multiprocessing.Process):
         reconstructed_topo = gaussian_filter(reconstructed_topo, sigma=1) # change sigma to higher values if needed 
 
 
-        #self.plot3d_plotly(reconstructed_topo, 'smooth_') 
+        #self.plot3d_plotly(reconstructed_topo, 'smooth_')
 
 
 
@@ -436,6 +446,7 @@ class ptReplica(multiprocessing.Process):
         filename=problem_folder+str(self.run_nb)+'/demfile_'+ str(int(self.temperature*10)) +'_demfile.csv'
         elev_frame.to_csv(filename,columns=['X', 'Y', 'Z'], sep=' ', index=False ,header=0,)
         model.input.demfile=filename
+        #model.input.demfile='Examples/etopo_extended/data/nodes.csv'
         model.build_mesh(model.input.demfile, verbose=False)
         
 
@@ -788,7 +799,7 @@ class ptReplica(multiprocessing.Process):
 
 class ParallelTempering:
 
-    def __init__(self, vec_parameters, rain_region, rain_time,  len_grid,  wid_grid, num_chains, maxtemp,NumSample,swap_interval, fname, realvalues_vec, num_param,  real_elev, erodep_pts, erodep_coords, simtime, siminterval, resolu_factor, run_nb, inputxml):
+    def __init__(self, vec_parameters, inittopo_expertknow, rain_region, rain_time,  len_grid,  wid_grid, num_chains, maxtemp,NumSample,swap_interval, fname, realvalues_vec, num_param,  real_elev, erodep_pts, erodep_coords, simtime, siminterval, resolu_factor, run_nb, inputxml):
 
 
         self.swap_interval = swap_interval
@@ -830,6 +841,7 @@ class ParallelTempering:
         self.rain_time = rain_time
         self.len_grid = len_grid
         self.wid_grid = wid_grid
+        self.inittopo_expertknow =  inittopo_expertknow
 
 
     def default_beta_ladder(self, ndim, ntemps, Tmax): #https://github.com/konqr/ptemcee/blob/master/ptemcee/sampler.py
@@ -940,7 +952,7 @@ class ParallelTempering:
         self.assign_temperatures()
         
         for i in xrange(0, self.num_chains):
-            self.chains.append(ptReplica( self.num_param, self.vec_parameters, self.rain_region, self.rain_time, self.len_grid, self.wid_grid, minlimits_vec, maxlimits_vec, stepratio_vec,  check_likelihood_sed ,self.swap_interval, self.sim_interval,   self.simtime, self.NumSamples, self.real_elev,   self.real_erodep_pts, self.erodep_coords, self.folder, self.xmlinput,  self.run_nb,self.temperatures[i], self.parameter_queue[i],self.event[i], self.wait_chain[i],burn_in))
+            self.chains.append(ptReplica( self.num_param, self.vec_parameters, self.inittopo_expertknow, self.rain_region, self.rain_time, self.len_grid, self.wid_grid, minlimits_vec, maxlimits_vec, stepratio_vec,  check_likelihood_sed ,self.swap_interval, self.sim_interval,   self.simtime, self.NumSamples, self.real_elev,   self.real_erodep_pts, self.erodep_coords, self.folder, self.xmlinput,  self.run_nb,self.temperatures[i], self.parameter_queue[i],self.event[i], self.wait_chain[i],burn_in))
                                      #self,  num_param, vec_parameters, rain_region, rain_time, len_grid, wid_grid, minlimits_vec, maxlimits_vec, stepratio_vec,   check_likelihood_sed ,  swap_interval, sim_interval, simtime, samples, real_elev,  real_erodep_pts, erodep_coords, filename, xmlinput,  run_nb, tempr, parameter_queue,event , main_proc,   burn_in):
 
             
@@ -1176,6 +1188,7 @@ class ParallelTempering:
 
         fig = Figure(data=data, layout=layout) 
         graph = plotly.offline.plot(fig, auto_open=False, output_type='file', filename= self.folder +  '/recons_initialtopo/'+fname+'_.html', validate=False)
+        np.savetxt(self.folder +  '/recons_initialtopo/'+fname+'_.txt', zData,  fmt='%1.2f' )
 
 
      
@@ -1213,8 +1226,10 @@ class ParallelTempering:
         for l in range(0,sub_gridlen):
             for w in range(0,sub_gridwidth): 
                 temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ] 
-                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += ( temp * scale_factor[l,w])
+                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += (      ((self.inittopo_expertknow[l,w]*0.80)  + (self.inittopo_expertknow[l,w] * scale_factor[l,w] ) ) )
 
+
+  
           
         #self.plot3d_plotly(reconstructed_topo, 'initrecon_')
 
@@ -1618,12 +1633,12 @@ class ParallelTempering:
 
         data = Data([Surface(x= zData.shape[0] , y= zData.shape[1] , z=zData, colorscale='YIGnBu')])
 
-        layout = Layout(title='Predicted Topography' , autosize=True, width=width, height=height,scene=Scene(
-                    zaxis=ZAxis(title = 'Elevation (m)   ', range=[zmin,zmax], autorange=False, nticks=6, gridcolor='rgb(255, 255, 255)',
+        layout = Layout(title=' ' , autosize=True, width=width, height=height,scene=Scene(
+                    zaxis=ZAxis(title = 'Elev. (m)   ', range=[zmin,zmax], autorange=False, nticks=2, gridcolor='rgb(255, 255, 255)',
                                 gridwidth=2, zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
-                    xaxis=XAxis(title = 'x-coordinates  ',  tickvals= xx,      gridcolor='rgb(255, 255, 255)', gridwidth=2,
+                    xaxis=XAxis(title = 'x-axis ',      gridcolor='rgb(255, 255, 255)', gridwidth=2,
                                 zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
-                    yaxis=YAxis(title = 'y-coordinates  ', tickvals= yy,    gridcolor='rgb(255, 255, 255)', gridwidth=2,
+                    yaxis=YAxis(title = 'y-axis  ',      gridcolor='rgb(255, 255, 255)', gridwidth=2,
                                 zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
                     bgcolor="rgb(244, 244, 248)"
                 )
@@ -1636,7 +1651,7 @@ class ParallelTempering:
         elev_data = np.reshape(zData, zData.shape[0] * zData.shape[1] )   
         hist, bin_edges = np.histogram(elev_data, density=True)
         plt.hist(elev_data, bins='auto')  
-        plt.title("Predicted Topography Histogram")  
+        plt.title("Predicted  Histogram")  
         plt.xlabel('Height in meters')
         plt.ylabel('Frequency')
         plt.savefig(fname )
@@ -1855,6 +1870,11 @@ def main():
         groundtruth_elev = np.loadtxt(datapath)
         groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
         groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+        inittopo_expertknow = np.loadtxt(problemfolder + 'data/inittopo_groundtruth.txt')  # should be of same format as @
+
+        print(inittopo_expertknow)
+        inittopo_expertknow = inittopo_expertknow.T
+
 
         simtime = 1000000
         resolu_factor = 1
@@ -1878,12 +1898,15 @@ def main():
         rain_regiongrid = 1  # how many regions in grid format 
         rain_timescale = 4  # to show climate change 
 
-        rain_minlimits = np.repeat(rain_min, rain_regiongrid*rain_timescale)
-        rain_maxlimits = np.repeat(rain_max, rain_regiongrid*rain_timescale)
+        #rain_minlimits = np.repeat(rain_min, rain_regiongrid*rain_timescale)
+        #rain_maxlimits = np.repeat(rain_max, rain_regiongrid*rain_timescale)
+        rain_minlimits = np.repeat(real_rain, rain_regiongrid*rain_timescale) # fix 
+        rain_maxlimits = np.repeat(real_rain, rain_regiongrid*rain_timescale) # fix
+
 
         #----------------------------------------InitTOPO
 
-        inittopo_gridlen = 10
+        inittopo_gridlen = 10  # should be of same format as @   inittopo_expertknow
         inittopo_gridwidth = 10
 
 
@@ -1893,14 +1916,21 @@ def main():
         print(len_grid,  wid_grid , '    ********************    ') 
 
 
-        inittopo_minlimits = np.repeat( 0 , inittopo_gridlen*inittopo_gridwidth)
-        inittopo_maxlimits = np.repeat( 1, inittopo_gridlen*inittopo_gridwidth)
+        inittopo_minlimits = np.repeat( 0.0 , inittopo_gridlen*inittopo_gridwidth)
+        inittopo_maxlimits = np.repeat( 0.3, inittopo_gridlen*inittopo_gridwidth)
  
 
         #--------------------------------------------------------
 
         minlimits_others = [4.e-6, 0, 0, 0,0, 0, 0, 0, 0, 0]  # make some extra space for future param (last 5)
         maxlimits_others = [6.e-6, 1, 2, 1,1, 1, 1, 1, 1, 1]
+
+        #minlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 0, 0, 0, 0, 0]  # 
+        #maxlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 1, 1, 1, 1, 1] # fix erod rain etc
+
+
+         
+
 
         # need to read file matrix of n x m that defines the course grid of initial topo. This is generated by final
         # topo ground-truth assuming that the shape of the initial top is similar to final one. 
@@ -2183,7 +2213,7 @@ def main():
     #-------------------------------------------------------------------------------------
     #Create A a Patratellel Tempring object instance 
     #-------------------------------------------------------------------------------------
-    pt = ParallelTempering(  vec_parameters, rain_regiongrid, rain_timescale, len_grid,  wid_grid, num_chains, maxtemp, samples,swap_interval,fname, true_parameter_vec, num_param  ,  groundtruth_elev,  groundtruth_erodep_pts , erodep_coords, simtime, sim_interval, resolu_factor, run_nb_str, xmlinput)
+    pt = ParallelTempering(  vec_parameters, inittopo_expertknow, rain_regiongrid, rain_timescale, len_grid,  wid_grid, num_chains, maxtemp, samples,swap_interval,fname, true_parameter_vec, num_param  ,  groundtruth_elev,  groundtruth_erodep_pts , erodep_coords, simtime, sim_interval, resolu_factor, run_nb_str, xmlinput)
     
     #-------------------------------------------------------------------------------------
     # intialize the MCMC chains
