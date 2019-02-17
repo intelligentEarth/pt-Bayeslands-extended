@@ -64,7 +64,7 @@ parser=argparse.ArgumentParser(description='PTBayeslands modelling')
 parser.add_argument('-p','--problem', help='Problem Number 1-crater-fast,2-crater,3-etopo-fast,4-etopo,5-null,6-mountain', required=True,   dest="problem",type=int)
 parser.add_argument('-s','--samples', help='Number of samples', default=10000, dest="samples",type=int)
 parser.add_argument('-r','--replicas', help='Number of chains/replicas, best to have one per availble core/cpu', default=10,dest="num_chains",type=int)
-parser.add_argument('-t','--temperature', help='Demoninator to determine Max Temperature of chains (MT=no.chains*t) ', default=1,dest="mt_val",type=int)
+parser.add_argument('-t','--temperature', help='Demoninator to determine Max Temperature of chains (MT=no.chains*t) ', default=10,dest="mt_val",type=int)
 parser.add_argument('-swap','--swap', help='Swap Ratio', dest="swap_ratio",default=0.02,type=float)
 parser.add_argument('-b','--burn', help='How many samples to discard before determing posteriors', dest="burn_in",default=0.25,type=float)
 parser.add_argument('-pt','--ptsamples', help='Ratio of PT vs straight MCMC samples to run', dest="pt_samples",default=0.5,type=float)
@@ -78,7 +78,7 @@ num_chains = args.num_chains
 swap_ratio = args.swap_ratio
 burn_in=args.burn_in
 #maxtemp = int(num_chains * 5)/args.mt_val
-maxtemp =  num_chains*args.mt_val 
+maxtemp =   args.mt_val 
 swap_interval = int(swap_ratio * (samples/num_chains)) #how ofen you swap neighbours
 num_successive_topo = 4
 pt_samples = args.pt_samples
@@ -328,11 +328,35 @@ class ptReplica(multiprocessing.Process):
             )
 
         fig = Figure(data=data, layout=layout) 
-        graph = plotly.offline.plot(fig, auto_open=False, output_type='file', filename= self.folder +  '/posterior/'+fname+ str(int(self.temperature*10))+'.html', validate=False)
 
 
+        graph = plotly.offline.plot(fig, auto_open=False, output_type='file', filename= self.folder +  '/recons_initialtopo/'+fname+ str(int(self.temperature*10))+'.html', validate=False)
+
+
+        '''fig = plt.figure()
+        ax = fig.gca(projection='3d') 
+        ax.plot_trisurf(xx, yy, zData.flatten(), linewidth=0.2, antialiased=True)  
+        fname = self.folder +  '/recons_initialtopo/'+fname+ str(int(self.temperature*10))+'.png'
+        '''
+         
+
+    def fuse_knowledge(self, scale_factor):
+        x_  = ( 0.8 * self.inittopo_expertknow.copy())  
+        v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
  
- 
+
+        v = v_.tolist()
+
+        #x = scalelist * 50
+
+        scalelist_ = np.asarray(v)
+
+
+
+        #print(xcv, ' xcv' )
+
+
+        return  scalelist_
 
 
     def process_inittopo(self, inittopo_vec):
@@ -358,21 +382,38 @@ class ptReplica(multiprocessing.Process):
         reconstructed_topo = self.real_elev.copy()  # to define the size
         groundtruth_topo = self.real_elev.copy()
 
-       # print(self.real_elev.shape, '   self.real_elev.shape')  
+        #print(inittopo_vec, '   inittopo_vec')  
 
 
         scale_factor = np.reshape(inittopo_vec, (sub_gridlen, -1)   )#np.random.rand(len_grid,wid_grid)
 
-        #self.inittopo_expertknow
+
+
+         
+
+
  
+        #x_  = ( self.inittopo_expertknow.copy())
+        #v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy()) # + x_
+
+        v_ = self.fuse_knowledge( scale_factor) 
+         #print(v_, ' is v_')
+
+        #x = x_.copy()  + v_.copy()
  
 
         for l in range(0,sub_gridlen):
             for w in range(0,sub_gridwidth): 
-                temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
-                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += (      ((self.inittopo_expertknow[l,w]*0.80)  + (self.inittopo_expertknow[l,w] * scale_factor[l,w] ) ) )
+                #temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
+                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid]  =+ v_[l,w]  
 
-                #reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += (      ((self.inittopo_expertknow[l,w]*0.70)  + (temp *  1  ) ) )
+        '''for l in range(0,sub_gridlen):
+            for w in range(0,sub_gridwidth): 
+                temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
+                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += x_[l,w]'''
+
+
+                #reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += (      ((self.inittopo_expertknow[l,w]*0.80)  + (self.inittopo_expertknow[l,w] * scale_factor[l,w] ) ) )
 
 
 
@@ -390,6 +431,18 @@ class ptReplica(multiprocessing.Process):
 
 
         return reconstructed_topo
+
+    '''def transform_initformat(self, directory , dataset,  res_fact ): 
+    
+        arr = dataset
+        with open(directory, 'a') as the_file:
+            for i in xrange(0, arr.shape[0]-2, 1):
+                for j in xrange(0, arr.shape[1]-2, 1):
+                    x_c = i*res_fact
+                    y_c = j*res_fact
+
+                    line = str(float(y_c)) + ' ' + str(float(x_c))+ ' ' + str(float("{0:.2f}".format(arr[i,j]))) +  '\n'
+                    the_file.write(line)'''
 
 
 
@@ -442,10 +495,21 @@ class ptReplica(multiprocessing.Process):
         
         
         #Put it back into 'Badlands' format and then re-load the model
-        elev_frame=pandas.DataFrame({'X':model.recGrid.rectX,'Y':model.recGrid.rectY,'Z':inittopo_estimate.flatten()})
         filename=problem_folder+str(self.run_nb)+'/demfile_'+ str(int(self.temperature*10)) +'_demfile.csv'
-        elev_frame.to_csv(filename,columns=['X', 'Y', 'Z'], sep=' ', index=False ,header=0,)
-        model.input.demfile=filename
+
+   
+        #elev_frame=pandas.DataFrame({'X':model.recGrid.rectX,'Y':model.recGrid.rectY,'Z':inittopo_estimate.flatten()})
+        #filename=problem_folder+str(self.run_nb)+'/demfile_'+ str(int(self.temperature*10)) +'_demfile.csv'
+        #elev_frame.to_csv(filename,columns=['X', 'Y', 'Z'], sep=' ', index=False ,header=0,)
+
+        elev_framex = np.vstack((model.recGrid.rectX,model.recGrid.rectY,inittopo_estimate.flatten()))
+ 
+        np.savetxt(filename, elev_framex.T, fmt='%1.2f' )
+
+
+         
+        model.input.demfile=filename 
+
         #model.input.demfile='Examples/etopo_extended/data/nodes.csv'
         model.build_mesh(model.input.demfile, verbose=False)
         
@@ -1026,14 +1090,14 @@ class ParallelTempering:
             for index in range(self.num_chains):
                 if not self.chains[index].is_alive():
                     count+=1
-                    print(str(self.chains[index].temperature) +" Dead")
+                    #print(str(self.chains[index].temperature) +" Dead")
 
             if count == self.num_chains:
                 break
-            print("Waiting for chains to finish...")
+            #print("Waiting for chains to finish...")
             timeout_count = 0
             for index in range(0,self.num_chains):
-                print("Waiting for chain: {}".format(index+1))
+                #print("Waiting for chain: {}".format(index+1))
                 flag = self.wait_chain[index].wait(timeout=5)
                 if flag:
                     print("Signal from chain: {}".format(index+1))
@@ -1167,9 +1231,7 @@ class ParallelTempering:
 
         xx = np.around(xx, decimals=0)
         yy = np.around(yy, decimals=0)
-        print (xx,' xx')
-        print (yy,' yy')
-
+         
         # range = [0,zData.shape[0]* self.resolu_factor]
         #range = [0,zData.shape[1]* self.resolu_factor],
 
@@ -1212,11 +1274,11 @@ class ParallelTempering:
         reconstructed_topo = self.real_elev.copy()  # to define the size
         groundtruth_topo = self.real_elev.copy()
 
-        print(self.real_elev.shape, '   self.real_elev.shape')  
+        #print(self.real_elev.shape, '   self.real_elev.shape')  
 
-        print(inittopo_vec , ' vec ')
+        #print(inittopo_vec , ' vec ')
 
-        print(inittopo_vec.shape, ' shape ')
+        #print(inittopo_vec.shape, ' shape ')
 
 
         scale_factor = np.reshape(inittopo_vec, (sub_gridlen, -1)   )#np.random.rand(len_grid,wid_grid)
@@ -1625,9 +1687,7 @@ class ParallelTempering:
 
         xx = np.around(xx, decimals=0)
         yy = np.around(yy, decimals=0)
-        print (xx,' xx')
-        print (yy,' yy')
-
+       
         # range = [0,zData.shape[0]* self.resolu_factor]
         #range = [0,zData.shape[1]* self.resolu_factor],
 
@@ -1646,6 +1706,12 @@ class ParallelTempering:
 
         fig = Figure(data=data, layout=layout) 
         graph = plotly.offline.plot(fig, auto_open=False, output_type='file', filename= self.folder +  '/pred_plots'+ '/pred_'+filename+'_'+str(time_frame)+ '_.html', validate=False)
+
+        '''fig = plt.figure()
+        ax = fig.gca(projection='3d') 
+        ax.plot_trisurf(xx, yy, zData, linewidth=0.2, antialiased=True)  
+        fname = self.folder + '/pred_plots'+'/pred_'+filename+'_'+str(time_frame)+ '_.png'''
+         
 
         fname = self.folder + '/pred_plots'+'/pred_'+filename+'_'+str(time_frame)+ '_.pdf' 
         elev_data = np.reshape(zData, zData.shape[0] * zData.shape[1] )   
@@ -1870,7 +1936,11 @@ def main():
         groundtruth_elev = np.loadtxt(datapath)
         groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
         groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
-        inittopo_expertknow = np.loadtxt(problemfolder + 'data/inittopo_groundtruth.txt')  # should be of same format as @
+        #inittopo_expertknow = np.loadtxt(problemfolder + 'data/inittopo_groundtruthcourse.txt')  # 5x5 grid
+        inittopo_expertknow = np.loadtxt(problemfolder + 'data/inittopo_groundtruth.txt')  # 10x10 grid
+        #inittopo_expertknow = np.loadtxt(problemfolder + 'data/inittopo_groundtruthfine.txt')  # 14x14 grid
+
+
 
         print(inittopo_expertknow)
         inittopo_expertknow = inittopo_expertknow.T
@@ -1909,6 +1979,9 @@ def main():
         inittopo_gridlen = 10  # should be of same format as @   inittopo_expertknow
         inittopo_gridwidth = 10
 
+        #inittopo_gridlen = 10  # should be of same format as @   inittopo_expertknow
+        #inittopo_gridwidth = 10
+
 
         len_grid = int(groundtruth_elev.shape[0]/inittopo_gridlen)  # take care of left over
         wid_grid = int(groundtruth_elev.shape[1]/inittopo_gridwidth)   # take care of left over
@@ -1916,17 +1989,17 @@ def main():
         print(len_grid,  wid_grid , '    ********************    ') 
 
 
-        inittopo_minlimits = np.repeat( 0.0 , inittopo_gridlen*inittopo_gridwidth)
-        inittopo_maxlimits = np.repeat( 0.3, inittopo_gridlen*inittopo_gridwidth)
+        inittopo_minlimits = np.repeat( -0.5 , inittopo_gridlen*inittopo_gridwidth)
+        inittopo_maxlimits = np.repeat( 0.5, inittopo_gridlen*inittopo_gridwidth)
  
 
         #--------------------------------------------------------
 
-        minlimits_others = [4.e-6, 0, 0, 0,0, 0, 0, 0, 0, 0]  # make some extra space for future param (last 5)
-        maxlimits_others = [6.e-6, 1, 2, 1,1, 1, 1, 1, 1, 1]
+        #minlimits_others = [4.e-6, 0, 0, 0,0, 0, 0, 0, 0, 0]  # make some extra space for future param (last 5)
+        #maxlimits_others = [6.e-6, 1, 2, 1,1, 1, 1, 1, 1, 1]
 
-        #minlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 0, 0, 0, 0, 0]  # 
-        #maxlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 1, 1, 1, 1, 1] # fix erod rain etc
+        minlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 0, 0, 0, 0, 0]  # 
+        maxlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 1, 1, 1, 1, 1] # fix erod rain etc
 
 
          
