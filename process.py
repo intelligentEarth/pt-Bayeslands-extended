@@ -65,9 +65,9 @@ def fuse_knowledge( scale_factor):
 
     v = v_.tolist() 
 
-    #scalelist_ = np.asarray(v) 
+    scalelist_ = np.asarray(v) 
 
-    return  v
+    return  v #scalelist_
 
 
 def process_inittopo( inittopo_vec, len_grid, wid_grid, groundtruth_elev):
@@ -113,18 +113,28 @@ def process_inittopo( inittopo_vec, len_grid, wid_grid, groundtruth_elev):
 
     #x = x_.copy()  + v_.copy()
 
+    '''for l in range(0,sub_gridlen):
+        for w in range(0,sub_gridwidth): 
+            for m in range(l * len_grid,(l+1) * len_grid):  
+                for n in range(w *  wid_grid, (w+1) * wid_grid):  
+                    reconstructed_topo[m,  n]   =  v_[l,w] 
+                    print(l,w,m,n, ' l,w,m,n')'''
+
     for l in range(0,sub_gridlen):
         for w in range(0,sub_gridwidth): 
-            #temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
-            reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid]  =  v_[l,w]  
-
-
+            for m in range(l * len_grid,(l+1) * len_grid):  
+                for n in range(w *  wid_grid, (w+1) * wid_grid):  
+                    reconstructed_topo[m][n]   +=  v_[l][w] 
+                    print(l,w,m,n, ' l,w,m,n')
+             
+ 
+             
  
 
     '''for l in range(0,sub_gridlen):
         for w in range(0,sub_gridwidth): 
             #temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
-            reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid]  =+ v_[l,w] ''' 
+            reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid]  =+ v_[l,w] '''
 
 
     reconstructed_topo = gaussian_filter(reconstructed_topo, sigma=1) # change sigma to higher values if needed 
@@ -204,28 +214,23 @@ def main():
  
 
 
-    temp_vec = np.append(rain_minlimits,minlimits_others)#,inittopo_minlimits)
-    minlimits_vec = np.append(temp_vec, inittopo_minlimits)
-
-    temp_vec = np.append(rain_maxlimits,maxlimits_others)#,inittopo_maxlimits)
-    maxlimits_vec = np.append(temp_vec, inittopo_maxlimits)
- 
-
- 
-    vec_parameters = np.random.uniform(minlimits_vec, maxlimits_vec) #  draw intial values for each of the free parameters
-
-
-    print(vec_parameters) 
-    geoparam  = rain_regiontime+10  # note 10 parameter space is for erod, c-marine etc etc, some extra space ( taking out time dependent rainfall)
- 	
- 	#stepratio_vec =  np.repeat(stepsize_ratio, vec_parameters.size) 
-    num_param = vec_parameters.size
-
-
-
-    inittopo_vec = vec_parameters[geoparam:]
+    
 
     for x in range(100000):
+    	temp_vec = np.append(rain_minlimits,minlimits_others)#,inittopo_minlimits)
+    	minlimits_vec = np.append(temp_vec, inittopo_minlimits)
+
+    	temp_vec = np.append(rain_maxlimits,maxlimits_others)#,inittopo_maxlimits)
+    	maxlimits_vec = np.append(temp_vec, inittopo_maxlimits) 
+ 
+    	vec_parameters = np.random.uniform(minlimits_vec, maxlimits_vec) #  draw intial values for each of the free parameters 
+     
+    	geoparam  = rain_regiontime+10  # note 10 parameter space is for erod, c-marine etc etc, some extra space ( taking out time dependent rainfall)
+ 	
+ 		#stepratio_vec =  np.repeat(stepsize_ratio, vec_parameters.size) 
+    	num_param = vec_parameters.size 
+
+    	inittopo_vec = vec_parameters[geoparam:]
     	process_inittopo( inittopo_vec, len_grid, wid_grid, groundtruth_elev) 
     	print(x)
 

@@ -29,6 +29,7 @@ from PIL import Image
 from io import StringIO
 from cycler import cycler
 import os
+import shutil
 import sys
 import matplotlib.mlab as mlab
 from matplotlib.patches import Polygon
@@ -339,24 +340,7 @@ class ptReplica(multiprocessing.Process):
         fname = self.folder +  '/recons_initialtopo/'+fname+ str(int(self.temperature*10))+'.png'
         '''
          
-
-    def fuse_knowledge(self, scale_factor):
-        x_  = ( 0.8 * self.inittopo_expertknow.copy())  
-        v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
  
-
-        v = v_.tolist()
-
-        #x = scalelist * 50
-
-        scalelist_ = np.asarray(v)
-
-
-
-        #print(xcv, ' xcv' )
-
-
-        return  scalelist_
 
 
     def process_inittopo(self, inittopo_vec):
@@ -379,7 +363,10 @@ class ptReplica(multiprocessing.Process):
         new_length =len_grid * sub_gridlen 
         new_width =wid_grid *  sub_gridwidth
 
-        reconstructed_topo = self.real_elev.copy()  # to define the size
+        reconstructed_topo_ = self.real_elev.copy()  # to define the size
+
+
+        reconstructed_topo = reconstructed_topo_.tolist()
         groundtruth_topo = self.real_elev.copy()
 
         #print(inittopo_vec, '   inittopo_vec')  
@@ -389,33 +376,27 @@ class ptReplica(multiprocessing.Process):
 
 
 
-         
+          
 
+        #v_ = self.fuse_knowledge( scale_factor) 
 
- 
-        #x_  = ( self.inittopo_expertknow.copy())
-        #v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy()) # + x_
-
-        v_ = self.fuse_knowledge( scale_factor) 
-         #print(v_, ' is v_')
-
-        #x = x_.copy()  + v_.copy()
+        v =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
  
 
-        for l in range(0,sub_gridlen):
-            for w in range(0,sub_gridwidth): 
-                #temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
-                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid]  =+ v_[l,w]  
+        v_ = v.tolist() 
+
+        for l in range(0,sub_gridlen-1):
+            for w in range(0,sub_gridwidth-1): 
+                for m in range(l * len_grid,(l+1) * len_grid):  
+                    for n in range(w *  wid_grid, (w+1) * wid_grid):  
+                        reconstructed_topo[m][n]   +=  v_[l][w] 
+ 
 
         '''for l in range(0,sub_gridlen):
             for w in range(0,sub_gridwidth): 
-                temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
-                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += x_[l,w]'''
-
-
-                #reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += (      ((self.inittopo_expertknow[l,w]*0.80)  + (self.inittopo_expertknow[l,w] * scale_factor[l,w] ) ) )
-
-
+                #temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
+                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid]  =+ v_[l,w]  '''
+ 
 
 
           
@@ -431,18 +412,7 @@ class ptReplica(multiprocessing.Process):
 
 
         return reconstructed_topo
-
-    '''def transform_initformat(self, directory , dataset,  res_fact ): 
-    
-        arr = dataset
-        with open(directory, 'a') as the_file:
-            for i in xrange(0, arr.shape[0]-2, 1):
-                for j in xrange(0, arr.shape[1]-2, 1):
-                    x_c = i*res_fact
-                    y_c = j*res_fact
-
-                    line = str(float(y_c)) + ' ' + str(float(x_c))+ ' ' + str(float("{0:.2f}".format(arr[i,j]))) +  '\n'
-                    the_file.write(line)'''
+ 
 
 
 
@@ -1258,9 +1228,14 @@ class ParallelTempering:
 
 
     def process_inittopo(self, inittopo_vec):  # same method from previous class ptReplica
-
         length = self.real_elev.shape[0]
-        width = self.real_elev.shape[1] 
+        width = self.real_elev.shape[1]
+
+
+        #len_grid = int(groundtruth_elev.shape[0]/inittopo_gridlen)  # take care of left over
+        #wid_grid = int(groundtruth_elev.shape[1]/inittopo_gridwidth)   # take care of left over
+
+ 
 
         len_grid = self.len_grid
         wid_grid = self.wid_grid
@@ -1271,37 +1246,52 @@ class ParallelTempering:
         new_length =len_grid * sub_gridlen 
         new_width =wid_grid *  sub_gridwidth
 
-        reconstructed_topo = self.real_elev.copy()  # to define the size
+        reconstructed_topo_ = self.real_elev.copy()  # to define the size
+
+
+        reconstructed_topo = reconstructed_topo_.tolist()
         groundtruth_topo = self.real_elev.copy()
 
-        #print(self.real_elev.shape, '   self.real_elev.shape')  
-
-        #print(inittopo_vec , ' vec ')
-
-        #print(inittopo_vec.shape, ' shape ')
+        #print(inittopo_vec, '   inittopo_vec')  
 
 
         scale_factor = np.reshape(inittopo_vec, (sub_gridlen, -1)   )#np.random.rand(len_grid,wid_grid)
 
 
 
-        for l in range(0,sub_gridlen):
+          
+
+        #v_ = self.fuse_knowledge( scale_factor) 
+
+        v =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
+ 
+
+        v_ = v.tolist() 
+
+        for l in range(0,sub_gridlen-1):
+            for w in range(0,sub_gridwidth-1): 
+                for m in range(l * len_grid,(l+1) * len_grid):  
+                    for n in range(w *  wid_grid, (w+1) * wid_grid):  
+                        reconstructed_topo[m][n]   +=  v_[l][w] 
+ 
+
+        '''for l in range(0,sub_gridlen):
             for w in range(0,sub_gridwidth): 
-                temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ] 
-                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid] += (      ((self.inittopo_expertknow[l,w]*0.80)  + (self.inittopo_expertknow[l,w] * scale_factor[l,w] ) ) )
+                #temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
+                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid]  =+ v_[l,w]  '''
+ 
 
 
-  
+          
+
           
         #self.plot3d_plotly(reconstructed_topo, 'initrecon_')
-
+ 
         reconstructed_topo = gaussian_filter(reconstructed_topo, sigma=1) # change sigma to higher values if needed 
 
 
-        #reconstructed_topo = reconstructed_topo[0:self.real_elev.shape[0], 0:self.real_elev.shape[1]]  # bug fix but not good fix - temp @
+        self.plot3d_plotly(reconstructed_topo, 'smooth_')
 
-
-        #self.plot3d_plotly(reconstructed_topo, 'smooth_')
 
 
         return reconstructed_topo
@@ -1989,8 +1979,8 @@ def main():
         print(len_grid,  wid_grid , '    ********************    ') 
 
 
-        inittopo_minlimits = np.repeat( -0.5 , inittopo_gridlen*inittopo_gridwidth)
-        inittopo_maxlimits = np.repeat( 0.5, inittopo_gridlen*inittopo_gridwidth)
+        inittopo_minlimits = np.repeat( 0.5 , inittopo_gridlen*inittopo_gridwidth)
+        inittopo_maxlimits = np.repeat( 1.5 , inittopo_gridlen*inittopo_gridwidth)
  
 
         #--------------------------------------------------------
@@ -2387,6 +2377,10 @@ def main():
     print("NumChains, problem, folder, time, RMSE_sed, RMSE,samples,swap,maxtemp,burn")
     print (num_chains, problemfolder, run_nb_str, (timer_end-timer_start)/60, rmse_sed, rmse,samples, swap_ratio,maxtemp,burn_in)
 
+    dir_name = fname + '/posterior'
+    print(dir_name)
+    if os.path.isdir(dir_name):
+        shutil.rmtree(dir_name)
 
 
     #stop()
