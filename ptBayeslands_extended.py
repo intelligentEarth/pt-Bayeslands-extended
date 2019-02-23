@@ -363,10 +363,10 @@ class ptReplica(multiprocessing.Process):
         new_length =len_grid * sub_gridlen 
         new_width =wid_grid *  sub_gridwidth
 
-        reconstructed_topo_ = self.real_elev.copy()  # to define the size
+        reconstructed_topo  = self.real_elev.copy()  # to define the size
 
 
-        reconstructed_topo = reconstructed_topo_.tolist()
+        #reconstructed_topo = reconstructed_topo_.tolist()
         groundtruth_topo = self.real_elev.copy()
 
         #print(inittopo_vec, '   inittopo_vec')  
@@ -380,23 +380,41 @@ class ptReplica(multiprocessing.Process):
 
         #v_ = self.fuse_knowledge( scale_factor) 
 
-        v =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
- 
+        v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
 
-        v_ = v.tolist() 
+     
+
+        #v_ = v.tolist() 
 
         for l in range(0,sub_gridlen-1):
             for w in range(0,sub_gridwidth-1): 
                 for m in range(l * len_grid,(l+1) * len_grid):  
                     for n in range(w *  wid_grid, (w+1) * wid_grid):  
                         reconstructed_topo[m][n]   +=  v_[l][w] 
+
+
+        width = reconstructed_topo.shape[0]
+        length = reconstructed_topo.shape[1]
+
+        #print(width, length,  '     width, length' )
+
+        
+        for l in range(0,sub_gridlen -1 ):  
+            w = sub_gridwidth-1
+            for m in range(l * len_grid,(l+1) * len_grid):  
+                    for n in range(w *  wid_grid,  length):  
+                        reconstructed_topo[m][n]   +=  v_[l][w] 
+
+           
+        for w in range(0,sub_gridwidth -1): 
+
+            l = sub_gridlen-1  
+            for m in range(l * len_grid,width):  
+                    for n in range(w *  wid_grid, (w+1) * wid_grid):  
+                        reconstructed_topo[m][n]   +=  v_[l][w]
+ 
  
 
-        '''for l in range(0,sub_gridlen):
-            for w in range(0,sub_gridwidth): 
-                #temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
-                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid]  =+ v_[l,w]  '''
- 
 
 
           
@@ -1261,29 +1279,40 @@ class ParallelTempering:
 
           
 
-        #v_ = self.fuse_knowledge( scale_factor) 
-
-        v =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
+        v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
  
 
-        v_ = v.tolist() 
+        #v_ = v.tolist() 
 
-        for l in range(0,sub_gridlen-1):
+       for l in range(0,sub_gridlen-1):
             for w in range(0,sub_gridwidth-1): 
                 for m in range(l * len_grid,(l+1) * len_grid):  
                     for n in range(w *  wid_grid, (w+1) * wid_grid):  
                         reconstructed_topo[m][n]   +=  v_[l][w] 
+
+
+        width = reconstructed_topo.shape[0]
+        length = reconstructed_topo.shape[1]
+
+        #print(width, length,  '     width, length' )
+
+        
+        for l in range(0,sub_gridlen -1 ):  
+            w = sub_gridwidth-1
+            for m in range(l * len_grid,(l+1) * len_grid):  
+                    for n in range(w *  wid_grid,  length):  
+                        reconstructed_topo[m][n]   +=  v_[l][w] 
+
+           
+        for w in range(0,sub_gridwidth -1): 
+
+            l = sub_gridlen-1  
+            for m in range(l * len_grid,width):  
+                    for n in range(w *  wid_grid, (w+1) * wid_grid):  
+                        reconstructed_topo[m][n]   +=  v_[l][w]
  
-
-        '''for l in range(0,sub_gridlen):
-            for w in range(0,sub_gridwidth): 
-                #temp = groundtruth_topo[l * len_grid: (l+1) *len_grid,           w * wid_grid: (w+1) * wid_grid ]  
-                reconstructed_topo[l * len_grid:(l+1) * len_grid,         w *  wid_grid: (w+1) * wid_grid]  =+ v_[l,w]  '''
  
-
-
-          
-
+ 
           
         #self.plot3d_plotly(reconstructed_topo, 'initrecon_')
  
