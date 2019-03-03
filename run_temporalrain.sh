@@ -3,9 +3,9 @@
 echo Running all 	 
 
  
-for t in 4 
+for t in 4 8 16
 	do
-		for x in  1000  #20000 40000    # 4 8 16
+		for x in  5000 10000   20000 40000    # 4 8 16
 
 		do
  

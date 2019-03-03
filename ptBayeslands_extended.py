@@ -223,6 +223,7 @@ class ptReplica(multiprocessing.Process):
  
 
 
+     
     def process_inittopo(self, inittopo_vec):
 
         length = self.real_elev.shape[0]
@@ -251,9 +252,7 @@ class ptReplica(multiprocessing.Process):
 
         #print(inittopo_vec, '   inittopo_vec')  
 
-
-        print(  reconstructed_topo.shape, '     reconstructed_topo.shape ')
-
+        inittopo_vec = inittopo_vec * self.inittopo_expertknow.flatten() 
 
         scale_factor = np.reshape(inittopo_vec, (sub_gridlen, -1)   )#np.random.rand(len_grid,wid_grid)
 
@@ -261,91 +260,49 @@ class ptReplica(multiprocessing.Process):
 
           
 
-        #v_ = self.fuse_knowledge( scale_factor) 
+        v_ =   scale_factor  
 
-        v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
+        #v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
 
-     
-
-        #v_ = v.tolist() 
-
+      
         for l in range(0,sub_gridlen-1):
             for w in range(0,sub_gridwidth-1): 
                 for m in range(l * len_grid,(l+1) * len_grid):  
                     for n in range(w *  wid_grid, (w+1) * wid_grid):  
-                        reconstructed_topo[m][n]   +=  v_[l][w] 
+                        reconstructed_topo[m][n]  = reconstructed_topo[m][n] +  v_[l][w] 
+ 
 
 
-        '''width = reconstructed_topo.shape[0]
+        width = reconstructed_topo.shape[0]
         length = reconstructed_topo.shape[1]
-
-        #print(width, length,  '     width, length' )
-
-        #edge_length = reconstructed_topo[ sub_gridwidth-1 *  wid_grid :width][0:length]
-
+ 
         for l in range(0,sub_gridlen -1 ):  
             w = sub_gridwidth-1
             for m in range(l * len_grid,(l+1) * len_grid):  
                     for n in range(w *  wid_grid,  length):  
-                        groundtruth_topo[m][n]   +=  v_[l][w] 
+                        reconstructed_topo[m][n]   +=  v_[l][w] 
 
         for w in range(0,sub_gridwidth -1): 
 
             l = sub_gridlen-1  
             for m in range(l * len_grid,width):  
                     for n in range(w *  wid_grid, (w+1) * wid_grid):  
-                        groundtruth_topo[m][n]   +=  v_[l][w]
+                        reconstructed_topo[m][n]   +=  v_[l][w]
 
+ 
 
-        #self.plot3d_plotly(groundtruth_topo, 'initrecon_xxxx')
+        '''inside = reconstructed_topo[  0 : sub_gridlen-2 * len_grid,0:   (sub_gridwidth-2 *  wid_grid)  ] 
 
-        inside = reconstructed_topo[  0 : sub_gridlen-2 * len_grid,0:   (sub_gridwidth-2 *  wid_grid)  ] 
-
-
-        #self.plot3d_plotly(inside, 'initrecon_xxxx')
-
-
-  
-
-        #groundtruth_topo[ 0 : sub_gridlen-1 * len_grid, 0:sub_gridwidth-1 *  wid_grid ] = reconstructed_topo[  0 : sub_gridlen-1 * len_grid,0:sub_gridwidth-1 *  wid_grid ] 
+ 
+   
 
         for m in range(0 , inside.shape[0]):  
             for n in range(0 ,   inside.shape[1]):  
-                    groundtruth_topo[m][n]   = inside[m][n] '''
-
-        #groundtruth_topo[ 0 : sub_gridlen-1 * len_grid, 0:sub_gridwidth-1 *  wid_grid ] = reconstructed_topo[  0 : 90 ,0: 90] 
+                    groundtruth_topo[m][n]   = inside[m][n]''' 
  
  
  
-
-        
-        '''for l in range(0,sub_gridlen):  
-            w = sub_gridwidth-1
-            for m in range(l * wid_grid, (l+1) * wid_grid):  
-                    for n in range(0,  edge_length.shape[0]):  
-                        edge_length[n][m]   +=  v_[w][l] '''
-
-        #reconstructed_topo[ sub_gridwidth -1 *  wid_grid :width][0:length] = edge_length 
-
-            
-
-        '''for l in range(0,sub_gridlen -2 ):  
-            w = sub_gridwidth-1
-            for m in range(l * len_grid,(l+1) * len_grid):  
-                    for n in range(w *  wid_grid,  length):  
-                        reconstructed_topo[m][n]   +=  v_[l][w] 
-
-           
-        for w in range(0,sub_gridwidth -1): 
-
-            l = sub_gridlen-1  
-            for m in range(l * len_grid,width):  
-                    for n in range(w *  wid_grid, (w+1) * wid_grid):  
-                        reconstructed_topo[m][n]   +=  v_[l][w]'''
- 
-
-
- 
+  
  
 
 
@@ -355,7 +312,7 @@ class ptReplica(multiprocessing.Process):
 
         self.plot3d_plotly(reconstructed_topo, 'GTinitrecon_')
  
-        reconstructed_topo = gaussian_filter(reconstructed_topo, sigma=1) # change sigma to higher values if needed 
+        reconstructed_topo = gaussian_filter( reconstructed_topo, sigma=1) # change sigma to higher values if needed 
 
 
         #self.plot3d_plotly(reconstructed_topo, 'smooth_')
@@ -705,7 +662,7 @@ class ptReplica(multiprocessing.Process):
                         print ('error')
 
                 else:
-                    print("Khali - swap bug fix by Arpit Kapoor ")
+                    print("empty  ")
                     
                 self.event.clear()
 
@@ -1175,7 +1132,9 @@ class ParallelTempering:
      
 
 
-    def process_inittopo(self, inittopo_vec):  # same method from previous class ptReplica
+ 
+    def process_inittopo(self, inittopo_vec):
+
         length = self.real_elev.shape[0]
         width = self.real_elev.shape[1]
 
@@ -1196,11 +1155,13 @@ class ParallelTempering:
 
         reconstructed_topo  = self.real_elev.copy()  # to define the size
 
- 
+
+        #reconstructed_topo = reconstructed_topo_.tolist()
         groundtruth_topo = self.real_elev.copy()
 
         #print(inittopo_vec, '   inittopo_vec')  
 
+        inittopo_vec = inittopo_vec * self.inittopo_expertknow.flatten() 
 
         scale_factor = np.reshape(inittopo_vec, (sub_gridlen, -1)   )#np.random.rand(len_grid,wid_grid)
 
@@ -1208,69 +1169,62 @@ class ParallelTempering:
 
           
 
-        v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
+        v_ =   scale_factor  
 
+        #v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
 
-        v_ =  np.multiply(self.inittopo_expertknow.copy(), scale_factor.copy())   #+ x_
-
-     
-
-        #v_ = v.tolist() 
-
+      
         for l in range(0,sub_gridlen-1):
             for w in range(0,sub_gridwidth-1): 
                 for m in range(l * len_grid,(l+1) * len_grid):  
                     for n in range(w *  wid_grid, (w+1) * wid_grid):  
-                        reconstructed_topo[m][n]   +=  v_[l][w] 
+                        reconstructed_topo[m][n]  = reconstructed_topo[m][n] +  v_[l][w] 
+ 
 
 
-        '''width = reconstructed_topo.shape[0]
+        width = reconstructed_topo.shape[0]
         length = reconstructed_topo.shape[1]
-
-        #print(width, length,  '     width, length' )
-
-        #edge_length = reconstructed_topo[ sub_gridwidth-1 *  wid_grid :width][0:length]
-
+ 
         for l in range(0,sub_gridlen -1 ):  
             w = sub_gridwidth-1
             for m in range(l * len_grid,(l+1) * len_grid):  
                     for n in range(w *  wid_grid,  length):  
-                        groundtruth_topo[m][n]   +=  v_[l][w] 
+                        reconstructed_topo[m][n]   +=  v_[l][w] 
 
         for w in range(0,sub_gridwidth -1): 
 
             l = sub_gridlen-1  
             for m in range(l * len_grid,width):  
                     for n in range(w *  wid_grid, (w+1) * wid_grid):  
-                        groundtruth_topo[m][n]   +=  v_[l][w]
-
-
-        #self.plot3d_plotly(groundtruth_topo, 'initrecon_xxxx')
-
-        inside = reconstructed_topo[  0 : sub_gridlen-2 * len_grid,0:   (sub_gridwidth-2 *  wid_grid)  ] 
+                        reconstructed_topo[m][n]   +=  v_[l][w]
 
  
 
-        #groundtruth_topo[ 0 : sub_gridlen-1 * len_grid, 0:sub_gridwidth-1 *  wid_grid ] = reconstructed_topo[  0 : sub_gridlen-1 * len_grid,0:sub_gridwidth-1 *  wid_grid ] 
+        '''inside = reconstructed_topo[  0 : sub_gridlen-2 * len_grid,0:   (sub_gridwidth-2 *  wid_grid)  ] 
+
+ 
+   
 
         for m in range(0 , inside.shape[0]):  
             for n in range(0 ,   inside.shape[1]):  
-                    groundtruth_topo[m][n]   = inside[m][n] '''
-
-        #groundtruth_topo[ 0 : sub_gridlen-1 * len_grid, 0:sub_gridwidth-1 *  wid_grid ] = reconstructed_topo[  0 : 90 ,0: 90] 
+                    groundtruth_topo[m][n]   = inside[m][n]''' 
  
  
  
+  
  
 
 
-        #self.plot3d_plotly(groundtruth_topo, 'GTinitrecon_')
+
+          
+
+
+        self.plot3d_plotly(reconstructed_topo, 'initrecon_')
  
-        reconstructed_topo = gaussian_filter(reconstructed_topo, sigma=1) # change sigma to higher values if needed 
+        reconstructed_topo = gaussian_filter( reconstructed_topo, sigma=1) # change sigma to higher values if needed 
 
  
-
-
+ 
         self.plot3d_plotly(reconstructed_topo, 'smooth_')
 
 
