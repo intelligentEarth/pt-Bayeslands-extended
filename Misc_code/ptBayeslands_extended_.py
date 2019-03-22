@@ -272,7 +272,7 @@ class ptReplica(multiprocessing.Process):
         width = reconstructed_topo.shape[0]
         length = reconstructed_topo.shape[1]
  
-        for l in range(0,sub_gridlen -1 ):  
+        '''for l in range(0,sub_gridlen -1 ):  
             w = sub_gridwidth-1
             for m in range(l * len_grid,(l+1) * len_grid):  
                     for n in range(w *  wid_grid,  length):  
@@ -283,7 +283,7 @@ class ptReplica(multiprocessing.Process):
             l = sub_gridlen-1  
             for m in range(l * len_grid,width):  
                     for n in range(w *  wid_grid, (w+1) * wid_grid):  
-                        reconstructed_topo[m][n]   +=  v_[l][w]
+                        reconstructed_topo[m][n]   +=  v_[l][w]'''
 
  
 
@@ -306,7 +306,7 @@ class ptReplica(multiprocessing.Process):
           
 
 
-        self.plot3d_plotly(reconstructed_topo, 'GTinitrecon_')
+        #self.plot3d_plotly(reconstructed_topo, 'GTinitrecon_')
  
         reconstructed_topo = gaussian_filter( reconstructed_topo, sigma=1) # change sigma to higher values if needed 
 
@@ -1276,32 +1276,11 @@ class ParallelTempering:
         self.cross_section(x_, y_xmid_mean, y_xmid_real, y_xmid_5th, y_xmid_95th, 'y_xmid_cross')
 
 
-        '''plt.tick_params(labelsize=size)
-        params = {'legend.fontsize': size, 'legend.handlelength': 2}
-        plt.rcParams.update(params)
-        plt.plot(x_, y_xmid_real, label='ground truth') 
-        plt.plot(x_, y_xmid_mean, label='model pred.') 
-        #plt.plot(x_, y_xmid_5th, label='pred.(5th percen.)')
-        #plt.plot(x_, y_xmid_95th, label='pred.(95th percen.)')
-        plt.xlabel(' Distance (km) ', fontsize = size)
-        plt.ylabel(' Height (m)', fontsize = size)
-        
-        plt.fill_between(x_, y_xmid_5th , y_xmid_95th, facecolor='g', alpha=0.4) 
-        plt.legend(loc='best')
-        #plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05), ncol=3, fancybox=True, shadow=True)
-
-       # plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
-        plt.title("Topography prediction  (cross section)  ", fontsize = size)
-        plt.tight_layout() 
-        plt.savefig(self.folder+'/y_xmid_opt.pdf')
-
-
-        plt.clf()'''
+       
 
     def cross_section(self, x, pred, real, lower, higher, fname):
 
-        size = 18
+        size = 15
 
         plt.tick_params(labelsize=size)
         params = {'legend.fontsize': size, 'legend.handlelength': 2}
@@ -1571,7 +1550,7 @@ class ParallelTempering:
          
 
 
-        size = 18
+        size = 15
 
         plt.tick_params(labelsize=size)
         params = {'legend.fontsize': size, 'legend.handlelength': 2}
@@ -1678,6 +1657,9 @@ def make_directory (directory):
 
 def plot_erodeposition(erodep_mean, erodep_std, groundtruth_erodep_pts, sim_interval, fname):
 
+
+    ticksize = 15
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     index = np.arange(groundtruth_erodep_pts.size) 
@@ -1693,20 +1675,14 @@ def plot_erodeposition(erodep_mean, erodep_std, groundtruth_erodep_pts, sim_inte
     rects2 = ax.bar(index+width, groundtruth_erodep_pts, width, color='green', 
                 yerr=ground_erodepstd,
                 error_kw=dict(elinewidth=2,ecolor='red') )
-
-    # axes and labels
-    #ax.set_xlim(-width,len(ind)+width)
-    #ax.set_ylim(0,0.2)
+ 
     ax.set_ylabel('Height in meters')
-    ax.set_xlabel('Selected Coordinates')
+    ax.set_xlabel('Location ID ')
     ax.set_title('Erosion Deposition')
 
-    xTickMarks = [str(i) for i in range(1,21)]
-    ax.set_xticks(index+width)
-    xtickNames = ax.set_xticklabels(xTickMarks)
-    plt.setp(xtickNames, rotation=0, fontsize=8)
-
-    ## add a legend
+ 
+    ax.tick_params(labelsize=ticksize)
+ 
     plotlegend = ax.legend( (rects1[0], rects2[0]), ('Predicted  ', ' Ground-truth ') )
     
     plt.savefig(fname +'/pos_erodep_'+str( sim_interval) +'_.pdf')
