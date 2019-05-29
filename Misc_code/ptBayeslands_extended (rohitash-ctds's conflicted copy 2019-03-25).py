@@ -14,10 +14,12 @@ import numpy as np
 import random
 import time
 import operator
-import math 
+import math
+import cmocean as cmo
 from pylab import rcParams
 import copy
-from copy import deepcopy 
+from copy import deepcopy
+import cmocean as cmo
 from pylab import rcParams
 import collections
 from scipy import special
@@ -41,7 +43,7 @@ import itertools
 import plotly
 import plotly.plotly as py
 from plotly.graph_objs import *
-#plotly.offline.init_notebook_mode()
+plotly.offline.init_notebook_mode()
 from plotly.offline.offline import _plot_html
 import pandas
 import argparse
@@ -250,7 +252,7 @@ class ptReplica(multiprocessing.Process):
         #reconstructed_topo = reconstructed_topo_.tolist()
         groundtruth_topo = self.real_elev.copy()
 
-        #print(inittopo_vec, '   inittopo_vec') 
+        print(inittopo_vec, '   inittopo_vec')  
 
 
         if method == 1: 
@@ -636,7 +638,6 @@ class ptReplica(multiprocessing.Process):
                 list_erodep_time[i+1,:, :] = list_erodep_time[i,:, :]
                 rmse_elev[i+1,] = rmse_elev[i,] 
                 rmse_erodep[i+1,] = rmse_erodep[i,]
-
             
                 if i>burnsamples:
 
@@ -647,10 +648,6 @@ class ptReplica(multiprocessing.Process):
                         sum_erodep_pts[k] += v
 
                     num_div += 1
-
-
-            #print(list_erodep[i+1,:], '  list_erodep[i+1,:] yyyy')
-            #print(list_erodep_time[i+1,:, :], ' list_erodep_time[i+1,:, :]  xxxx')
 
 
             if ( i % self.swap_interval == 0 ):
@@ -680,55 +677,6 @@ class ptReplica(multiprocessing.Process):
                     
                 self.event.clear()
 
-            save_res =  np.array([i, num_accepted, likelihood, likelihood_proposal, rmse_elev[i+1,], rmse_erodep[i+1,]])  
-
-            with file(('%s/posterior/pos_parameters/stream_chain_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
-                np.savetxt(outfile,np.array([pos_param[i+1,:]]), fmt='%1.8f') 
-
-            with file(('%s/posterior/predicted_topo/x_slice/stream_xslice_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
-                np.savetxt(outfile,np.array([list_xslicepred[i+1,:]]), fmt='%1.2f') 
-
-            with file(('%s/posterior/predicted_topo/y_slice/stream_yslice_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
-                np.savetxt(outfile,np.array([list_yslicepred[i+1,:]]), fmt='%1.2f') 
-
-            with file(('%s/posterior/stream_res_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
-                np.savetxt(outfile,np.array([save_res]), fmt='%1.2f')  
-
-            with file(('%s/performance/lhood/stream_res_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
-                np.savetxt(outfile,np.array([likeh_list[i + 1,1]]), fmt='%1.2f') 
-
-            with file(('%s/performance/accept/stream_res_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
-                np.savetxt(outfile,np.array([accept_list[i+1]]), fmt='%1.2f')
-
-            with file(('%s/performance/rmse_edep/stream_res_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
-                np.savetxt(outfile,np.array([rmse_erodep[i+1,]]), fmt='%1.2f')
-
-            with file(('%s/performance/rmse_elev/stream_res_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
-                np.savetxt(outfile,np.array([rmse_elev[i+1,]]), fmt='%1.2f')
-
-            temp = list_erodep_time[i+1,:, :] 
-            temp = np.reshape(temp, temp.shape[0]*temp.shape[1]) 
-
-            file_name = self.folder + '/posterior/predicted_topo/sed/chain_' + str(self.temperature) + '.txt'
-            with file(file_name ,'a') as outfile:
-                np.savetxt(outfile, np.array([temp]), fmt='%1.2f') 
-
-
-
-            #for s in range(self.sim_interval.size):  
-            '''for s in range(self.sim_interval.size): 
-                temp = list_erodep_time[i+1,:, :]
-
-
-                print(temp, ' temp')
-                file_name = self.folder + '/posterior/predicted_topo/sed/chain_' + str(self.sim_interval[s]) + '_' + str(self.temperature) + '.txt'
-                with file(file_name ,'a') as outfile:
-                    np.savetxt(outfile, np.array([temp]), fmt='%1.2f')'''
-                    #print (list_erodep_time, 'is shape   ------------------------------')
-
-                #np.savetxt(file_name, list_erodep_time[:,s, :] , fmt='%.2f') 
- 
-
         #----------end for loop of samples----------------------------- 
 
 
@@ -745,7 +693,7 @@ class ptReplica(multiprocessing.Process):
         self.parameter_queue.put(param)
 
         #Save out the data for each chain
-        '''file_name = self.folder+'/posterior/pos_parameters/chain_'+ str(self.temperature)+ '.txt'
+        file_name = self.folder+'/posterior/pos_parameters/chain_'+ str(self.temperature)+ '.txt'
         np.savetxt(file_name,pos_param ) 
 
         file_name = self.folder+'/posterior/predicted_topo/chain_xslice_'+ str(self.temperature)+ '.txt'
@@ -767,12 +715,12 @@ class ptReplica(multiprocessing.Process):
         np.savetxt(file_name, rmse_elev, fmt='%1.2f')       
     
         file_name = self.folder+'/posterior/rmse_erodep_chain_'+ str(self.temperature)+ '.txt'
-        np.savetxt(file_name, rmse_erodep, fmt='%1.2f')'''
+        np.savetxt(file_name, rmse_erodep, fmt='%1.2f')
 
 
-        '''for s in range(self.sim_interval.size):  
+        for s in range(self.sim_interval.size):  
             file_name = self.folder + '/posterior/predicted_erodep/chain_' + str(self.sim_interval[s]) + '_' + str(self.temperature) + '.txt'
-            np.savetxt(file_name, list_erodep_time[:,s, :] , fmt='%.2f') '''
+            np.savetxt(file_name, list_erodep_time[:,s, :] , fmt='%.2f') 
 
         for k, v in sum_elev.items():
             sum_elev[k] = np.divide(sum_elev[k], num_div)
@@ -781,7 +729,7 @@ class ptReplica(multiprocessing.Process):
             sum_erodep_pts[k] = np.divide(sum_erodep_pts[k], num_div)
             mean_pred_erodep_pnts = sum_erodep_pts[k]
 
-            file_name = self.folder + '/posterior/predicted_topo/topo/chain_' + str(k) + '_' + str(self.temperature) + '.txt'
+            file_name = self.folder + '/posterior/predicted_topo/chain_' + str(k) + '_' + str(self.temperature) + '.txt'
             np.savetxt(file_name, mean_pred_elevation, fmt='%.2f')
 
         self.signal_main.set()
@@ -1407,7 +1355,7 @@ class ParallelTempering:
         rmse_erodep = np.zeros((self.num_chains, self.NumSamples-burnin))
 
 
-        '''for i in range(self.num_chains):
+        for i in range(self.num_chains):
             file_name = self.folder + '/posterior/pos_parameters/'+filename + str(self.temperatures[i]) + '.txt'
             dat = np.loadtxt(file_name) 
             pos_param[i, :, :] = dat[burnin:,:]
@@ -1438,28 +1386,28 @@ class ParallelTempering:
 
             file_name = self.folder+'/posterior/rmse_erodep_chain_'+ str(self.temperatures[i])+ '.txt'
             dat = np.loadtxt(file_name)
-            rmse_erodep[i,:] = dat[burnin:]'''
+            rmse_erodep[i,:] = dat[burnin:]
 
-        for i in range(self.num_chains):
+
             for j in range(self.sim_interval.size):
 
-                file_name = self.folder+'/posterior/predicted_topo/topo/chain_'+str(self.sim_interval[j])+'_'+ str(self.temperatures[i])+ '.txt'
+                file_name = self.folder+'/posterior/predicted_topo/chain_'+str(self.sim_interval[j])+'_'+ str(self.temperatures[i])+ '.txt'
                 dat_topo = np.loadtxt(file_name)
                 replica_topo[j,i,:,:] = dat_topo
 
-                '''file_name = self.folder+'/posterior/predicted_topo/sed/chain_'+str(self.sim_interval[j])+'_'+ str(self.temperatures[i])+ '.txt'
+                file_name = self.folder+'/posterior/predicted_erodep/chain_'+str(self.sim_interval[j])+'_'+ str(self.temperatures[i])+ '.txt'
                 dat_erodep = np.loadtxt(file_name)
-                combined_erodep[j,i,:,:] = dat_erodep[burnin:,:]'''
+                combined_erodep[j,i,:,:] = dat_erodep[burnin:,:]
 
 
-        '''posterior = pos_param.transpose(2,0,1).reshape(self.num_param,-1)    
-            xslice = list_xslice.transpose(2,0,1).reshape(self.real_elev.shape[1],-1) 
-            yslice = list_yslice.transpose(2,0,1).reshape(self.real_elev.shape[0],-1) 
+        posterior = pos_param.transpose(2,0,1).reshape(self.num_param,-1)    
+        xslice = list_xslice.transpose(2,0,1).reshape(self.real_elev.shape[1],-1) 
+        yslice = list_yslice.transpose(2,0,1).reshape(self.real_elev.shape[0],-1) 
 
-            rmse_elev = rmse_elev.reshape(self.num_chains*(self.NumSamples - burnin),1)
-            rmse_erodep = rmse_erodep.reshape(self.num_chains*(self.NumSamples - burnin),1)
+        rmse_elev = rmse_elev.reshape(self.num_chains*(self.NumSamples - burnin),1)
+        rmse_erodep = rmse_erodep.reshape(self.num_chains*(self.NumSamples - burnin),1)
 
-            likelihood_vec = likehood_rep.transpose(2,0,1).reshape(2,-1) '''
+        likelihood_vec = likehood_rep.transpose(2,0,1).reshape(2,-1) 
 
 
         for j in range(self.sim_interval.size):
@@ -1472,14 +1420,14 @@ class ParallelTempering:
             timespan_erodep[j,:,:] = dx.T
 
 
-        #accept = np.sum(accept_percent)/self.num_chains
+        accept = np.sum(accept_percent)/self.num_chains
 
         pred_topofinal = combined_topo[-1,:,:] # get the last mean pedicted topo to calculate mean squared error loss 
 
-        '''np.savetxt(self.folder + '/pos_param.txt', posterior.T) 
+        np.savetxt(self.folder + '/pos_param.txt', posterior.T) 
         np.savetxt(self.folder + '/likelihood.txt', likelihood_vec.T, fmt='%1.5f')
         np.savetxt(self.folder + '/accept_list.txt', accept_list, fmt='%1.2f')
-        np.savetxt(self.folder + '/acceptpercent.txt', [accept], fmt='%1.2f')'''
+        np.savetxt(self.folder + '/acceptpercent.txt', [accept], fmt='%1.2f')
 
         return posterior, likelihood_vec.T, accept_list, combined_topo,   timespan_erodep, accept, pred_topofinal, xslice, yslice, rmse_elev, rmse_erodep
 
@@ -2024,11 +1972,11 @@ def main():
 
         #--------------------------------------------------------
 
-        minlimits_others = [4.e-6, 0, 0, 0,0, 0, 0, 0, 0, 0]  # make some extra space for future param (last 5)
-        maxlimits_others = [6.e-6, 1, 2, 1,1, 1, 1, 1, 1, 1]
+        #minlimits_others = [4.e-6, 0, 0, 0,0, 0, 0, 0, 0, 0]  # make some extra space for future param (last 5)
+        #maxlimits_others = [6.e-6, 1, 2, 1,1, 1, 1, 1, 1, 1]
 
-        #minlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 0, 0, 0, 0, 0]  # 
-        #maxlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 1, 1, 1, 1, 1] # fix erod rain etc
+        minlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 0, 0, 0, 0, 0]  # 
+        maxlimits_others = [real_erod, m, n, real_cmarine, real_caerial, 1, 1, 1, 1, 1] # fix erod rain etc
 
 
          
@@ -2209,8 +2157,233 @@ def main():
 
  
 
- 
- 
+
+
+    elif problem == 5:  # @ Nathan - update this section
+        problemfolder = 'Examples/PNG/'
+        xmlinput = problemfolder + 'png.xml'
+
+
+        datapath = problemfolder + 'data/final_elev.txt'
+        groundtruth_elev = np.loadtxt(datapath)
+        groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
+        groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+
+        simtime = 10000 # need to verify @Nathan
+        resolu_factor = 1
+        true_parameter_vec = np.loadtxt(problemfolder + 'data/true_values.txt')
+        likelihood_sediment = True
+
+
+        res_summaryfile = '/results_canonicalPT_PNG.txt'
+
+
+        #Set variables
+        m = 0.5
+        m_min = 0.
+        m_max = 2
+        
+        n = 1.
+        n_min = 0.
+        n_max = 2.
+
+        rain_real = 1.5
+        rain_min = 0.
+        rain_max = 3.
+
+        erod_real = 5.e-6
+        erod_min = 3.e-6
+        erod_max = 7.e-6
+                
+        #uplift_real = 50000
+        uplift_min = 0.1 # X uplift_real
+        uplift_max = 5.0 # X uplift_real
+
+
+        #Rainfall, erodibility, m, n, uplift
+        minlimits_vec=[rain_min,erod_min,m_min,n_min,uplift_min]
+        maxlimits_vec=[rain_max,erod_max,m_max,n_max,uplift_max]
+
+
+           ## hence, for 4 regions of rain and 1 erod, plus other free parameters (p1, p2) [rain_reg1, rain_reg2, rain_reg3, rain_reg4, erod, p1, p2 ]
+                #if you want to freeze a parameter, keep max and min limits the same
+             
+                
+        #minlimits_vec=[rain_real,erod_real,m,n,uplift_min]
+        #maxlimits_vec=[rain_real,erod_real,m,n,uplift_max] 
+                
+        vec_parameters = np.random.uniform(minlimits_vec, maxlimits_vec) #  draw intial values for each of the free parameters
+
+        stepsize_ratio  = 0.02 #   you can have different ratio values for different parameters depending on the problem. Its safe to use one value for now
+
+        stepratio_vec =  np.repeat(stepsize_ratio, vec_parameters.size) 
+        stepratio_vec = [stepsize_ratio, stepsize_ratio, stepsize_ratio, stepsize_ratio, 0.02] 
+        stepratio_vec = [0.1, 0.1, 0.1, 0.1, 0.1]
+        print("steps: ", stepratio_vec)
+        num_param = vec_parameters.size
+        erodep_coords=np.array([[5,5],[10,10],[20,20],[30,30],[40,40],[50,50],[25,25],[37,30],[44,27],[46,10]])   # @Nathan we need to update this
+        
+
+        if (true_parameter_vec.shape[0] != vec_parameters.size ) :
+            print( 'vec_params != true_values.txt ',true_parameter_vec.shape,vec_parameters.size)
+            print( 'make sure that this is updated in case when you intro more parameters. should have as many rows as parameters ') 
+            
+            return
+
+
+
+
+
+
+
+    elif problem == 6:  # 
+        problemfolder = 'Examples/PNG/'
+        xmlinput = problemfolder + 'png.xml'
+
+
+        datapath = problemfolder + 'data/final_elev.txt'
+        groundtruth_elev = np.loadtxt(datapath)
+        groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
+        groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+
+        simtime = 10000 # need to verify @Nathan
+        resolu_factor = 1
+        true_parameter_vec = np.loadtxt(problemfolder + 'data/true_values.txt')
+        likelihood_sediment = True
+
+
+        res_summaryfile = '/results_PNGtemporalrain.txt'
+
+
+        #Set variables
+        m = 0.5
+        m_min = 0.
+        m_max = 2
+        
+        n = 1.
+        n_min = 0.
+        n_max = 2.
+
+        rain_real = 1.5
+        rain_min = 0.
+        rain_max = 3.
+
+        erod_real = 5.e-6
+        erod_min = 3.e-6
+        erod_max = 7.e-6
+                
+        #uplift_real = 50000
+        uplift_min = 0.1 # X uplift_real
+        uplift_max = 5.0 # X uplift_real
+
+
+        #Rainfall, erodibility, m, n, uplift
+        minlimits_vec=[rain_min,erod_min,m_min,n_min,uplift_min]
+        maxlimits_vec=[rain_max,erod_max,m_max,n_max,uplift_max]
+
+
+           ## hence, for 4 regions of rain and 1 erod, plus other free parameters (p1, p2) [rain_reg1, rain_reg2, rain_reg3, rain_reg4, erod, p1, p2 ]
+                #if you want to freeze a parameter, keep max and min limits the same
+             
+                
+        #minlimits_vec=[rain_real,erod_real,m,n,uplift_min]
+        #maxlimits_vec=[rain_real,erod_real,m,n,uplift_max] 
+                
+        vec_parameters = np.random.uniform(minlimits_vec, maxlimits_vec) #  draw intial values for each of the free parameters
+
+        stepsize_ratio  = 0.02 #   you can have different ratio values for different parameters depending on the problem. Its safe to use one value for now
+
+        stepratio_vec =  np.repeat(stepsize_ratio, vec_parameters.size) 
+        stepratio_vec = [stepsize_ratio, stepsize_ratio, stepsize_ratio, stepsize_ratio, 0.02] 
+        stepratio_vec = [0.1, 0.1, 0.1, 0.1, 0.1]
+        print("steps: ", stepratio_vec)
+        num_param = vec_parameters.size
+        erodep_coords=np.array([[5,5],[10,10],[20,20],[30,30],[40,40],[50,50],[25,25],[37,30],[44,27],[46,10]])   # @Nathan we need to update this
+        
+
+        if (true_parameter_vec.shape[0] != vec_parameters.size ) :
+            print( 'vec_params != true_values.txt ',true_parameter_vec.shape,vec_parameters.size)
+            print( 'make sure that this is updated in case when you intro more parameters. should have as many rows as parameters ') 
+            
+            return
+
+
+
+
+
+    elif problem == 7:  # 
+        problemfolder = 'Examples/PNG/'
+        xmlinput = problemfolder + 'png.xml'
+
+
+        datapath = problemfolder + 'data/final_elev.txt'
+        groundtruth_elev = np.loadtxt(datapath)
+        groundtruth_erodep = np.loadtxt(problemfolder + 'data/final_erdp.txt')
+        groundtruth_erodep_pts = np.loadtxt(problemfolder + 'data/final_erdp_pts.txt')
+
+        simtime = 10000 # need to verify @Nathan
+        resolu_factor = 1
+        true_parameter_vec = np.loadtxt(problemfolder + 'data/true_values.txt')
+        likelihood_sediment = True
+
+
+        res_summaryfile = '/results_PNGtemporalrain_inittopo.txt'
+
+
+        #Set variables
+        m = 0.5
+        m_min = 0.
+        m_max = 2
+        
+        n = 1.
+        n_min = 0.
+        n_max = 2.
+
+        rain_real = 1.5
+        rain_min = 0.
+        rain_max = 3.
+
+        erod_real = 5.e-6
+        erod_min = 3.e-6
+        erod_max = 7.e-6
+                
+        #uplift_real = 50000
+        uplift_min = 0.1 # X uplift_real
+        uplift_max = 5.0 # X uplift_real
+
+
+        #Rainfall, erodibility, m, n, uplift
+        minlimits_vec=[rain_min,erod_min,m_min,n_min,uplift_min]
+        maxlimits_vec=[rain_max,erod_max,m_max,n_max,uplift_max]
+
+
+           ## hence, for 4 regions of rain and 1 erod, plus other free parameters (p1, p2) [rain_reg1, rain_reg2, rain_reg3, rain_reg4, erod, p1, p2 ]
+                #if you want to freeze a parameter, keep max and min limits the same
+             
+                
+        #minlimits_vec=[rain_real,erod_real,m,n,uplift_min]
+        #maxlimits_vec=[rain_real,erod_real,m,n,uplift_max] 
+                
+        vec_parameters = np.random.uniform(minlimits_vec, maxlimits_vec) #  draw intial values for each of the free parameters
+
+        stepsize_ratio  = 0.02 #   you can have different ratio values for different parameters depending on the problem. Its safe to use one value for now
+
+        stepratio_vec =  np.repeat(stepsize_ratio, vec_parameters.size) 
+        stepratio_vec = [stepsize_ratio, stepsize_ratio, stepsize_ratio, stepsize_ratio, 0.02] 
+        stepratio_vec = [0.1, 0.1, 0.1, 0.1, 0.1]
+        print("steps: ", stepratio_vec)
+        num_param = vec_parameters.size
+        erodep_coords=np.array([[5,5],[10,10],[20,20],[30,30],[40,40],[50,50],[25,25],[37,30],[44,27],[46,10]])   # @Nathan we need to update this
+        
+
+        if (true_parameter_vec.shape[0] != vec_parameters.size ) :
+            print( 'vec_params != true_values.txt ',true_parameter_vec.shape,vec_parameters.size)
+            print( 'make sure that this is updated in case when you intro more parameters. should have as many rows as parameters ') 
+            
+            return
+
+
+
 
 
 
@@ -2222,11 +2395,11 @@ def main():
 
     fname = ""
     run_nb = 0
-    while os.path.exists( problemfolder+ 'results_%s' % (run_nb)):
+    while os.path.exists(problemfolder +str(problem)+'results_%s' % (run_nb)):
         run_nb += 1
-    if not os.path.exists( problemfolder+ 'results_%s' % (run_nb)):
-        os.makedirs( problemfolder+ 'results_%s' % (run_nb))
-        fname = ( problemfolder+ 'results_%s' % (run_nb))
+    if not os.path.exists(problemfolder +str(problem)+'results_%s' % (run_nb)):
+        os.makedirs(problemfolder +str(problem)+'results_%s' % (run_nb))
+        fname = (problemfolder +str(problem)+'results_%s' % (run_nb))
 
     #fname = ('sampleresults')
 
@@ -2235,27 +2408,12 @@ def main():
     make_directory((fname + '/recons_initialtopo')) 
 
     make_directory((fname + '/pos_plots')) 
-    make_directory((fname + '/posterior/predicted_topo/topo'))  
+    make_directory((fname + '/posterior/predicted_topo'))
+    make_directory((fname + '/posterior/pos_likelihood'))
+    make_directory((fname + '/posterior/accept_list'))
+    make_directory((fname + '/posterior/predicted_erodep'))
 
-    make_directory((fname + '/posterior/predicted_topo/sed'))  
-
-    make_directory((fname + '/posterior/predicted_topo/x_slice'))
-
-    make_directory((fname + '/posterior/predicted_topo/y_slice'))
-
-    make_directory((fname + '/posterior/posterior/predicted_erodep')) 
     make_directory((fname + '/pred_plots'))
-
-
-    make_directory((fname + '/performance/lhood'))
-    make_directory((fname + '/performance/accept'))
-    make_directory((fname + '/performance/rmse_edep'))
-    make_directory((fname + '/performance/rmse_elev'))
-
-
-
- 
- 
 
     run_nb_str = str(problem)+'results_' + str(run_nb)
 
@@ -2398,14 +2556,14 @@ def main():
     print("NumChains, problem, folder, time, RMSE_sed, RMSE,samples,swap,maxtemp,burn")
     print (num_chains, problemfolder, run_nb_str, (timer_end-timer_start)/60, rmse_sed, rmse,samples, swap_ratio,maxtemp,burn_in)
 
-    '''dir_name = fname + '/posterior'
+    dir_name = fname + '/posterior'
     fname_remove = fname +'/pos_param.txt'
     print(dir_name)
     if os.path.isdir(dir_name):
         shutil.rmtree(dir_name)
 
     if os.path.exists(fname_remove):  # comment if you wish to keep pos file
-        os.remove(fname_remove)'''
+        os.remove(fname_remove)
 
 
 
