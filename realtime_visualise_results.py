@@ -94,7 +94,7 @@ method = 1 # type of formaltion for inittopo construction (Method 1 showed bette
 
 class results_visualisation:
 
-    def __init__(self, vec_parameters, inittopo_expertknow, rain_regiongrid, rain_timescale, len_grid,  wid_grid, num_chains, maxtemp, samples,swap_interval,fname, num_param  ,  groundtruth_elev,  groundtruth_erodep_pts , erodep_coords, simtime, sim_interval, resolu_factor,  xmlinput ):
+    def __init__(self, vec_parameters, inittopo_expertknow, rain_regiongrid, rain_timescale, len_grid,  wid_grid, num_chains, maxtemp, samples,swap_interval,fname, num_param  ,  groundtruth_elev,  groundtruth_erodep_pts , erodep_coords, simtime, sim_interval, resolu_factor,  xmlinput,  run_nb_str ):
 
    
         self.swap_interval = swap_interval
@@ -116,6 +116,7 @@ class results_visualisation:
         self.sim_interval = sim_interval
         #self.run_nb =run_nb 
         self.xmlinput = xmlinput
+        self.run_nb_str =  run_nb_str
         self.vec_parameters = vec_parameters
         #self.realvalues  =  realvalues_vec 
 
@@ -186,10 +187,10 @@ class results_visualisation:
 
     
 
-        swap_perc = self.num_swap*100/self.total_swap_proposals  
+        swap_perc = self.num_swap*100/self.total_swap_proposals  '''
 
         rain_regiontime = self.rain_region * self.rain_time # number of parameters for rain based on  region and time  
-        geoparam  = rain_regiontime+10  # note 10 parameter space is for erod, c-marine etc etc, some extra space ( taking out time dependent rainfall)'''
+        geoparam  = rain_regiontime+10  # note 10 parameter space is for erod, c-marine etc etc, some extra space ( taking out time dependent rainfall) 
  
         mean_pos = posterior.mean(axis=1) 
 
@@ -201,7 +202,7 @@ class results_visualisation:
 
        
 
-        '''if problem==1 or problem==2 : # problem is global variable
+        if problem==1 or problem==2 : # problem is global variable
             init = False
         else:
             init = True # when you need to estimate initial topo
@@ -238,12 +239,12 @@ class results_visualisation:
         else:
 
             rmse_full_init = 0
-            rmse_slice_init =  0'''
+            rmse_slice_init =  0
 
 
 
         #return (pos_param,likelihood_rep, accept_list,   combined_erodep,  pred_topofinal, swap_perc, accept,  rmse_elev, rmse_erodep, rmse_slice_init, rmse_full_init)
-        return  posterior, likelihood_vec, accept_list,   xslice, yslice, rmse_elev, rmse_erodep, erodep_pts
+        return  posterior, likelihood_vec, accept_list,   xslice, yslice, rmse_elev, rmse_erodep, erodep_pts, rmse_slice_init, rmse_full_init
 
 
     def plot3d_plotly(self, zData, fname): # same method from previous class - ptReplica
@@ -470,7 +471,7 @@ class results_visualisation:
 
         model = badlandsModel() 
         # Load the XmL input file
-        model.load_xml(str(self.run_nb), self.xmlinput, muted=True) 
+        model.load_xml(str(self.run_nb_str), self.xmlinput, muted=True) 
         #Update the initial topography
         #Use the coordinates from the original dem file
         xi=int(np.shape(model.recGrid.rectX)[0]/model.recGrid.nx)
@@ -604,6 +605,11 @@ class results_visualisation:
 
         #------------------------------------------------------------------------
 
+        '''for j in range(self.sim_interval.size): 
+
+            dx = combined_erodep[j,:,:,:].transpose(2,0,1).reshape(self.real_erodep_pts.shape[1],-1)
+
+            timespan_erodep[j,:,:] = dx.T'''
 
 
 
@@ -695,7 +701,7 @@ class results_visualisation:
 
 
         
-        return posterior, likelihood_vec.T, accept_list,   xslice, yslice, rmse_elev, rmse_erodep, erodep_pts
+        return posterior, likelihood_vec, accept_list,   xslice, yslice, rmse_elev, rmse_erodep, erodep_pts
 
 
         
@@ -884,12 +890,19 @@ class results_visualisation:
 # class  above this line -------------------------------------------------------------------------------------------------------
 
 
-def mean_sqerror(  pred_erodep, pred_elev,  real_elev,  real_erodep_pts):
+'''def mean_sqerror(  pred_erodep, pred_elev,  real_elev,  real_erodep_pts):
         
         elev = np.sqrt(np.sum(np.square(pred_elev -  real_elev))  / real_elev.size)  
         sed =  np.sqrt(  np.sum(np.square(pred_erodep -  real_erodep_pts)) / real_erodep_pts.size  ) 
 
-        return elev + sed, sed
+        return elev + sed, sed'''
+
+def mean_sqerror(  pred_erodep,   real_erodep_pts):
+        
+        #elev = np.sqrt(np.sum(np.square(pred_elev -  real_elev))  / real_elev.size)  
+        sed =  np.sqrt(  np.sum(np.square(pred_erodep -  real_erodep_pts)) / real_erodep_pts.size  ) 
+
+        return   sed
 
 
 def make_directory (directory): 
@@ -1311,48 +1324,15 @@ def main():
     else:
         print('choose some problem  ')
 
-
-    '''fname = ""
-    run_nb = 0
-    while os.path.exists(problemfolder +str(problem)+'results_%s' % (run_nb)):
-        run_nb += 1
-    if not os.path.exists(problemfolder +str(problem)+'results_%s' % (run_nb)):
-        os.makedirs(problemfolder +str(problem)+'results_%s' % (run_nb))
-        fname = (problemfolder +str(problem)+'results_%s' % (run_nb))
-
-    #fname = ('sampleresults')
-
-    make_directory((fname + '/posterior/pos_parameters')) 
-
-    make_directory((fname + '/recons_initialtopo')) 
-
-    make_directory((fname + '/pos_plots')) 
-    make_directory((fname + '/posterior/predicted_topo'))
-    make_directory((fname + '/posterior/pos_likelihood'))
-    make_directory((fname + '/posterior/accept_list'))
-    make_directory((fname + '/posterior/predicted_erodep'))
-
-    make_directory((fname + '/pred_plots'))
-
-    run_nb_str = str(problem)+'results_' + str(run_nb)'''
+ 
 
 
+ 
+
+    run_nb = 3   # point to the results folder
 
 
-    #-------------------------------------------------------------------------------------
-    # Number of chains of MCMC required to be run
-    # PT is a multicore implementation must num_chains >= 2
-    # Choose a value less than the numbe of core available (avoid context swtiching)
-    #-------------------------------------------------------------------------------------
-    #num_chains = int(sys.argv[3]) #8  
-    #swap_ratio = 0.05   #adapt these 
-    #burn_in =0.3 
-    #num_successive_topo = 4
-    #swap_interval =   int(swap_ratio * (samples/num_chains)) #how ofen you swap neighbours
-    #print(swap_interval, ' swap')
-
-
-    run_nb = 0   # point to the results folder
+    run_nb_str =  'results_' + str(run_nb)
 
 
     fname = problemfolder +'results_%s' % (run_nb)   #easy way to give the path 
@@ -1370,19 +1350,19 @@ def main():
 
     #def __init__(self, vec_parameters, inittopo_expertknow, rain_regiongrid, rain_timescale, len_grid,  wid_grid, num_chains, maxtemp, samples,swap_interval,fname, num_param  ,  groundtruth_elev,  groundtruth_erodep_pts , erodep_coords, simtime, sim_interval, resolu_factor,  xmlinput ):
 
-    res = results_visualisation(  vec_parameters, inittopo_expertknow, rain_regiongrid, rain_timescale, len_grid,  wid_grid, num_chains, maxtemp, samples,swap_interval,fname, num_param  ,  groundtruth_elev,  groundtruth_erodep_pts , erodep_coords, simtime, sim_interval, resolu_factor,  xmlinput)
+    res = results_visualisation(  vec_parameters, inittopo_expertknow, rain_regiongrid, rain_timescale, len_grid,  wid_grid, num_chains, maxtemp, samples,swap_interval,fname, num_param  ,  groundtruth_elev,  groundtruth_erodep_pts , erodep_coords, simtime, sim_interval, resolu_factor,  xmlinput,  run_nb_str)
     
     #------------------------------------------------------------------------------------- 
     #run the chains in a sequence in ascending order
     #-------------------------------------------------------------------------------------
     #pos_param,likehood_rep, accept_list,   combined_erodep, pred_elev,  swap_perc, accept_per,  rmse_elev, rmse_erodep, rmse_slice_init, rmse_full_init  = res.results_current()
-    pos_param, likehood_rep, accept_list,   xslice, yslice, rmse_elev, rmse_sed, erodep_pts   = res.results_current()
+    pos_param, likehood_rep, accept_list,   xslice, yslice, rmse_elev, rmse_erodep, erodep_pts, rmse_slice_init, rmse_full_init   = res.results_current()
 
 
 
     print('sucessfully sampled') 
     timer_end = time.time() 
-    likelihood = likehood_rep[:,0] # just plot proposed likelihood  
+    likelihood = likehood_rep # just plot proposed likelihood  
     #likelihood = np.asarray(np.split(likelihood,  num_chains ))
 
     plt.plot(likelihood.T)
@@ -1404,28 +1384,37 @@ def main():
 
     print(erodep_pts.shape, ' erodep_pts.shape')
 
-    #combined_erodep =   #np.reshape(erodep_pts, (3,-1))
+    #combined_erodep =   #np.reshape(erodep_pts, (3,-1)) 
 
-    print(combined_erodep.shape, ' combined_erodep  ***** ')
 
-    for i in range(sim_interval.size):
-        pos_ed  = combined_erodep[i, :, :] 
-
-        #print(pos_ed) 
-        erodep_mean = pos_ed.mean(axis=0)  
-        erodep_std = pos_ed.std(axis=0)  
-        plot_erodeposition(erodep_mean, erodep_std, groundtruth_erodep_pts[i,:], sim_interval[i], fname) 
-        #np.savetxt(fname + '/posterior/predicted_erodep/com_erodep_'+str(sim_interval[i]) +'_.txt', pos_ed)
-
+ 
     pred_erodep = np.zeros(( groundtruth_erodep_pts.shape[0], groundtruth_erodep_pts.shape[1] )) # just to get the right size
 
 
-
     for i in range(sim_interval.size): 
-        pos_ed  = combined_erodep[i, :, :] # get final one for comparision
-        pred_erodep[i,:] = pos_ed.mean(axis=0)   
 
-    rmse, rmse_sed= mean_sqerror(  pred_erodep, pred_elev,  groundtruth_elev,  groundtruth_erodep_pts)
+        begin = i * groundtruth_erodep_pts.shape[1] # number of points 
+        end = begin + groundtruth_erodep_pts.shape[1] 
+
+        pos_ed = erodep_pts[begin:end, :] 
+        pos_ed = pos_ed.T 
+        erodep_mean = pos_ed.mean(axis=0)  
+        erodep_std = pos_ed.std(axis=0)  
+        pred_erodep[i,:] = pos_ed.mean(axis=0)  
+
+        print(erodep_mean, erodep_std, groundtruth_erodep_pts[i,:], sim_interval[i], fname) 
+        plot_erodeposition(erodep_mean, erodep_std, groundtruth_erodep_pts[i,:], sim_interval[i], fname) 
+        #np.savetxt(fname + '/posterior/predicted_erodep/com_erodep_'+str(sim_interval[i]) +'_.txt', pos_ed)
+
+  
+
+    pred_elev = np.array([])
+
+    #rmse, rmse_sed= mean_sqerror(  pred_erodep, pred_elev,  groundtruth_elev,  groundtruth_erodep_pts)
+
+    rmse_sed= mean_sqerror(  pred_erodep,  groundtruth_erodep_pts)
+
+    rmse = 0
 
      
 
@@ -1449,8 +1438,8 @@ def main():
 
 
     timer_end = time.time() 
-    likelihood = likehood_rep[:,0] # just plot proposed likelihood  
-    likelihood = np.asarray(np.split(likelihood,  num_chains ))
+    #likelihood = likehood_rep[:,0] # just plot proposed likelihood  
+    #likelihood = np.asarray(np.split(likelihood,  num_chains ))
 
     rmse_el = np.mean(rmse_elev[:])
     rmse_el_std = np.std(rmse_elev[:])
@@ -1465,6 +1454,9 @@ def main():
 
     resultingfile_db = open(problemfolder+res_summaryfile,'a+')  
     #outres_db = open(problemfolder+'/result.txt', "a+")
+
+    swap_perc = 0 # get value later -- to do
+    accept_per = 0 
 
     allres =  np.asarray([ problem, num_chains, maxtemp, samples,swap_interval,  rmse_el, 
                         rmse_er, rmse_el_std, rmse_er_std, rmse_el_min, 
@@ -1487,11 +1479,11 @@ def main():
     dir_name = fname + '/posterior'
     fname_remove = fname +'/pos_param.txt'
     print(dir_name)
-    if os.path.isdir(dir_name):
+    '''if os.path.isdir(dir_name):
         shutil.rmtree(dir_name)
 
     if os.path.exists(fname_remove):  # comment if you wish to keep pos file
-        os.remove(fname_remove) 
+        os.remove(fname_remove) '''
 
 
 

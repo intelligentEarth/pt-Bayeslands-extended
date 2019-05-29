@@ -5,7 +5,7 @@ echo Running all
  
 for t in 4 #4 8 16
 	do
-		for x in  1000 #10000 20000      
+		for x in  500 #10000 20000      
 
 		do
  
