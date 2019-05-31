@@ -506,6 +506,9 @@ class results_visualisation:
         self.NumSamples = int((self.num_chains * size_pos)/ self.num_chains)
 
 
+        print(self.NumSamples,    ' ***')
+
+
 
         burnin =  int((self.NumSamples * self.burn_in)/self.num_chains)
 
@@ -550,6 +553,7 @@ class results_visualisation:
             #print (dat)
             print(v, name, ' is v')
             v = v +1
+            print(pos_param.shape, 'pos_param size') 
 
         print(pos_param.shape, 'pos_param size') 
 
@@ -1329,7 +1333,7 @@ def main():
 
  
 
-    run_nb = 3   # point to the results folder
+    run_nb = 0  # point to the results folder
 
 
     run_nb_str =  'results_' + str(run_nb)

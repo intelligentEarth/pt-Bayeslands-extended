@@ -65,7 +65,7 @@ parser.add_argument('-p','--problem', help='Problem Number 1-crater-fast,2-crate
 parser.add_argument('-s','--samples', help='Number of samples', default=10000, dest="samples",type=int)
 parser.add_argument('-r','--replicas', help='Number of chains/replicas, best to have one per availble core/cpu', default=10,dest="num_chains",type=int)
 parser.add_argument('-t','--temperature', help='Demoninator to determine Max Temperature of chains (MT=no.chains*t) ', default=10,dest="mt_val",type=int)
-parser.add_argument('-swap','--swap', help='Swap Ratio', dest="swap_ratio",default=0.02,type=float)
+parser.add_argument('-swap','--swap', help='Swap interval', dest="swap_interval",default= 2,type=int)
 parser.add_argument('-b','--burn', help='How many samples to discard before determing posteriors', dest="burn_in",default=0.25,type=float)
 parser.add_argument('-pt','--ptsamples', help='Ratio of PT vs straight MCMC samples to run', dest="pt_samples",default=0.5,type=float)  
 parser.add_argument('-rain_intervals','--rain_intervals', help='rain_intervals', dest="rain_intervals",default=4,type=int)
@@ -81,11 +81,10 @@ args = parser.parse_args()
 problem = args.problem
 samples = args.samples #10000  # total number of samples by all the chains (replicas) in parallel tempering
 num_chains = args.num_chains
-swap_ratio = args.swap_ratio
+swap_interval = args.swap_interval
 burn_in=args.burn_in
 #maxtemp = int(num_chains * 5)/args.mt_val
-maxtemp =   args.mt_val 
-swap_interval = int(swap_ratio * (samples/num_chains)) #how ofen you swap neighbours
+maxtemp =   args.mt_val  
 num_successive_topo = 4
 pt_samples = args.pt_samples
 epsilon = args.epsilon
