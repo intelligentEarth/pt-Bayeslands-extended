@@ -1735,6 +1735,9 @@ def main():
     make_directory((fname + '/performance/rmse_elev'))
 
 
+    np.savetxt('foldername.txt', np.array([fname]), fmt="%s")
+
+
 
  
  

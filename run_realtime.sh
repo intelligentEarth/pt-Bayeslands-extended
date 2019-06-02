@@ -10,6 +10,7 @@ maxtemp=3
 burn=0.25
 pt_stage=0.5
 raintimeint=4
+initialtopoep=0.5
 
 echo $problem 
 
@@ -18,8 +19,8 @@ echo $problem
 for t in 1 #4 8 16
 	do  
  
-			python ptBayeslands_ext_realtime.py -p $problem -s $samples -r $replica -t $maxtemp -swap $swapint -b $burn -pt $pt_stage  -epsilon 0.5 -rain_intervals $raintimeint
-			python realtime_visualise_results.py -p $problem -s $samples -r $replica -t $maxtemp -swap $swapint -b $burn -pt $pt_stage  -epsilon 0.5 -rain_intervals $raintimeint
+			python ptBayeslands_ext_realtime.py -p $problem -s $samples -r $replica -t $maxtemp -swap $swapint -b $burn -pt $pt_stage  -epsilon $initialtopoep -rain_intervals $raintimeint
+			python realtime_visualise_results.py -p $problem -s $samples -r $replica -t $maxtemp -swap $swapint -b $burn -pt $pt_stage  -epsilon $initialtopoep -rain_intervals $raintimeint
 
   
   

@@ -1332,14 +1332,18 @@ def main():
 
 
  
-
-    run_nb = 0  # point to the results folder
-
-
-    run_nb_str =  'results_' + str(run_nb)
+ 
 
 
-    fname = problemfolder +'results_%s' % (run_nb)   #easy way to give the path 
+    #fname = np.genfromtxt('foldername.txt',dtype='str')
+
+
+    with open ("foldername.txt", "r") as f:
+        fname = f.read().splitlines() 
+
+    fname = fname[0].rstrip()
+
+
     run_nb_str = fname
 
     timer_start = time.time()
@@ -1473,8 +1477,8 @@ def main():
     #np.savetxt(outres,  allres   , fmt='%1.4f', newline=' '  )   
     #np.savetxt(resultingfile,   allres   , fmt='%1.4f',  newline=' ' ) 
     
-    xv=problemfolder+'_'+str(run_nb)
-    np.savetxt(resultingfile_db, [xv]   ,  fmt="%s", newline=' \n' ) 
+    #xv=problemfolder+'_'+str(run_nb)
+    np.savetxt(resultingfile_db, [fname]   ,  fmt="%s", newline=' \n' ) 
 
 
     print("NumChains, problem, folder, time, RMSE_sed, RMSE,samples,swap,maxtemp,burn")
