@@ -188,9 +188,8 @@ class ptReplica(multiprocessing.Process):
         yy = (np.linspace(0, zData.shape[1] * resolu_factor, num=zData.shape[1]/10 )) 
 
         xx = np.around(xx, decimals=0)
-        yy = np.around(yy, decimals=0)
-        print (xx,' xx')
-        print (yy,' yy')
+        yy = np.around(yy, decimals=0) 
+
 
         # range = [0,zData.shape[0]* self.resolu_factor]
         #range = [0,zData.shape[1]* self.resolu_factor],
@@ -247,11 +246,9 @@ class ptReplica(multiprocessing.Process):
         reconstructed_topo  = self.real_elev.copy()  # to define the size
 
 
-        #reconstructed_topo = reconstructed_topo_.tolist()
+
         groundtruth_topo = self.real_elev.copy()
-
-        #print(inittopo_vec, '   inittopo_vec') 
-
+ 
 
         if method == 1: 
 
@@ -346,7 +343,7 @@ class ptReplica(multiprocessing.Process):
         # Load the XmL input file
         model.load_xml(str(self.run_nb), self.input, muted=True)
 
-        if  problem==1 or problem==2 : # when you have initial topo (problem is global variable)
+        if  problem==1 or problem ==2  : # in [1,2]: # when you have initial topo (problem is global variable)
             init = False
         else:
             init = True # when you need to estimate initial topo
@@ -385,9 +382,7 @@ class ptReplica(multiprocessing.Process):
  
             model.build_mesh(model.input.demfile, verbose=False)
         
-
-        # Adjust precipitation values based on given parameter
-        #print(input_vector[0:rain_regiontime] )
+ 
         model.force.rainVal  = input_vector[0:rain_regiontime] 
 
 
@@ -647,10 +642,7 @@ class ptReplica(multiprocessing.Process):
                         sum_erodep_pts[k] += v
 
                     num_div += 1
-
-
-            #print(list_erodep[i+1,:], '  list_erodep[i+1,:] yyyy')
-            #print(list_erodep_time[i+1,:, :], ' list_erodep_time[i+1,:, :]  xxxx')
+ 
 
 
             if ( i % self.swap_interval == 0 ):
@@ -695,7 +687,7 @@ class ptReplica(multiprocessing.Process):
                 np.savetxt(outfile,np.array([save_res]), fmt='%1.2f')  
 
             with file(('%s/performance/lhood/stream_res_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
-                np.savetxt(outfile,np.array([likeh_list[i + 1,1]]), fmt='%1.2f') 
+                np.savetxt(outfile,np.array([likeh_list[i + 1,0]]), fmt='%1.2f') 
 
             with file(('%s/performance/accept/stream_res_%s.txt' % (self.folder, self.temperature)),'a') as outfile:
                 np.savetxt(outfile,np.array([accept_list[i+1]]), fmt='%1.2f')
@@ -722,10 +714,10 @@ class ptReplica(multiprocessing.Process):
         others = np.asarray([ likelihood])
         param = np.concatenate([v_current,others,np.asarray([self.temperature])])   
 
-        print("param first:",param)
+        '''print("param first:",param)
         print("v_current",v_current)
         print("others",others)
-        print("temp",np.asarray([self.temperature]))
+        print("temp",np.asarray([self.temperature]))'''
         
         self.parameter_queue.put(param)
 
@@ -1015,27 +1007,12 @@ class ParallelTempering:
 
         print(number_exchange, 'num_exchange, process ended')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        combined_topo,    accept, pred_topofinal = self.show_results('chain_')
+        combined_topo,    accept, pred_topo, combined_topo  = self.show_results('chain_')
 
         
         for i in range(self.sim_interval.size):
 
-            self.viewGrid(width=1000, height=1000, zmin=None, zmax=None, zData=pred_topo[i,:,:], title='Predicted Topography ', time_frame=self.sim_interval[i],  filename= 'mean')
+            self.viewGrid(width=1000, height=1000, zmin=None, zmax=None, zData=combined_topo[i,:,:], title='Predicted Topography ', time_frame=self.sim_interval[i],  filename= 'mean')
 
         
         swap_perc = self.num_swap*100/self.total_swap_proposals  
@@ -1043,53 +1020,9 @@ class ParallelTempering:
         
 
 
-        return (pred_topofinal, swap_perc, accept)
-
-
-    def plot3d_plotly(self, zData, fname): # same method from previous class - ptReplica
-
-     
-        zmin =  zData.min() 
-        zmax =  zData.max()
-
-        tickvals= [0,50,75,-50]
-        height=1000
-        width=1000
-        #title='Topography'
-        resolu_factor = 1
-
-        xx = (np.linspace(0, zData.shape[0]* resolu_factor, num=zData.shape[0]/10 )) 
-        yy = (np.linspace(0, zData.shape[1] * resolu_factor, num=zData.shape[1]/10 )) 
-
-        xx = np.around(xx, decimals=0)
-        yy = np.around(yy, decimals=0)
-         
-        # range = [0,zData.shape[0]* self.resolu_factor]
-        #range = [0,zData.shape[1]* self.resolu_factor],
-
-        data = Data([Surface(x= zData.shape[0] , y= zData.shape[1] , z=zData, colorscale='YIGnBu')])
-
-        layout = Layout(title='' , autosize=True, width=width, height=height,scene=Scene(
-                    zaxis=ZAxis(title = ' Elev.(m) ', range=[zmin,zmax], autorange=False, nticks=6, gridcolor='rgb(255, 255, 255)',
-                                gridwidth=2, zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
-                    xaxis=XAxis(title = ' x ',  tickvals= xx,      gridcolor='rgb(255, 255, 255)', gridwidth=2,
-                                zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
-                    yaxis=YAxis(title = ' y ', tickvals= yy,    gridcolor='rgb(255, 255, 255)', gridwidth=2,
-                                zerolinecolor='rgb(255, 255, 255)', zerolinewidth=2),
-                    bgcolor="rgb(244, 244, 248)"
-                )
-            )
-
-        fig = Figure(data=data, layout=layout) 
-        graph = plotly.offline.plot(fig, auto_open=False, output_type='file', filename= self.folder +  '/recons_initialtopo/'+fname+'_.html', validate=False)
-        np.savetxt(self.folder +  '/recons_initialtopo/'+fname+'_.txt', zData,  fmt='%1.2f' )
-
-
-     
-     
+        return (pred_topo, swap_perc, accept)
 
  
-
 
     # Merge different MCMC chains y stacking them on top of each other
     def show_results(self, filename):
@@ -1116,17 +1049,15 @@ class ParallelTempering:
                 combined_topo[j,:,:] += replica_topo[j,i,:,:]  
             combined_topo[j,:,:] = combined_topo[j,:,:]/self.num_chains
 
-            dx = combined_erodep[j,:,:,:].transpose(2,0,1).reshape(self.real_erodep_pts.shape[1],-1)
-
-            timespan_erodep[j,:,:] = dx.T
+      
 
 
-        #accept = np.sum(accept_percent)/self.num_chains
+        accept = 0
 
         pred_topofinal = combined_topo[-1,:,:] # get the last mean pedicted topo to calculate mean squared error loss 
  
 
-        return  combined_topo,    accept, pred_topofinal
+        return  combined_topo,    accept, pred_topofinal, combined_topo
 
 
  
@@ -1153,9 +1084,7 @@ class ParallelTempering:
 
         xx = np.around(xx, decimals=0)
         yy = np.around(yy, decimals=0)
-        print (xx,' xx')
-        print (yy,' yy')
-
+      
         #test
 
         # range = [0,zData.shape[0]* self.resolu_factor]
@@ -1210,56 +1139,14 @@ class ParallelTempering:
 
 # class  above this line -------------------------------------------------------------------------------------------------------
 
-
-def mean_sqerror(  pred_erodep, pred_elev,  real_elev,  real_erodep_pts):
-        
-        elev = np.sqrt(np.sum(np.square(pred_elev -  real_elev))  / real_elev.size)  
-        sed =  np.sqrt(  np.sum(np.square(pred_erodep -  real_erodep_pts)) / real_erodep_pts.size  ) 
-
-        return elev + sed, sed
+ 
 
 
 def make_directory (directory): 
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-def plot_erodeposition(erodep_mean, erodep_std, groundtruth_erodep_pts, sim_interval, fname):
-
-
-    ticksize = 15
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    index = np.arange(groundtruth_erodep_pts.size) 
-    ground_erodepstd = np.zeros(groundtruth_erodep_pts.size) 
-    opacity = 0.8
-    width = 0.35       # the width of the bars
-
-    rects1 = ax.bar(index, erodep_mean, width,
-                color='blue',
-                yerr=erodep_std,
-                error_kw=dict(elinewidth=2,ecolor='red'))
-
-    rects2 = ax.bar(index+width, groundtruth_erodep_pts, width, color='green', 
-                yerr=ground_erodepstd,
-                error_kw=dict(elinewidth=2,ecolor='red') )
  
-
-    ax.set_ylabel('Height in meters', fontsize=ticksize)
-    ax.set_xlabel('Location ID ', fontsize=ticksize)
-    ax.set_title('Erosion/Deposition', fontsize=ticksize)
-    
-    ax.grid(alpha=0.75)
-
- 
-    ax.tick_params(labelsize=ticksize)
- 
-    plotlegend = ax.legend( (rects1[0], rects2[0]), ('Predicted  ', ' Ground-truth ') )
-    
-    plt.savefig(fname +'/pos_erodep_'+str( sim_interval) +'_.pdf')
-    plt.clf()    
-
-
 
 
 def main():
@@ -1329,8 +1216,7 @@ def main():
 
         stepratio_vec =  np.repeat(stepsize_ratio, vec_parameters.size) 
         num_param = vec_parameters.size
-
-        print(vec_parameters) 
+ 
 
         erodep_coords = np.array([[42,10],[39,8],[75,51],[59,13],[40,5],[6,20],[14,66],[4,40],[72,73],[46,64]])  # need to hand pick given your problem
 
@@ -1403,8 +1289,7 @@ def main():
         minlimits_vec = np.append(rain_minlimits,minlimits_others)
 
         maxlimits_vec = np.append(rain_maxlimits,maxlimits_others)
-
-        print(maxlimits_vec, ' maxlimits ')
+ 
 
 
 
@@ -1527,13 +1412,7 @@ def main():
         temp_vec = np.append(rain_maxlimits,maxlimits_others)#,inittopo_maxlimits)
         maxlimits_vec = np.append(temp_vec, inittopo_maxlimits)
 
-
-        print(maxlimits_vec, ' maxlimits ')
-
-        print(minlimits_vec, ' maxlimits ')
-
-
-
+ 
 
 
 
@@ -1554,8 +1433,7 @@ def main():
 
         stepratio_vec =  np.repeat(stepsize_ratio, vec_parameters.size) 
         num_param = vec_parameters.size
-
-        print(vec_parameters) 
+ 
 
         erodep_coords = np.array([[42,10],[39,8],[75,51],[59,13],[40,5],[6,20],[14,66],[4,40],[72,73],[46,64]])  # need to hand pick given your problem
 
@@ -1577,8 +1455,7 @@ def main():
         res_summaryfile = '/results_inittopo.txt'
 
 
-
-        print(inittopo_expertknow)
+ 
         inittopo_expertknow = inittopo_expertknow.T
 
 
@@ -1622,8 +1499,7 @@ def main():
         len_grid = int(groundtruth_elev.shape[0]/inittopo_gridlen)  # take care of left over
         wid_grid = int(groundtruth_elev.shape[1]/inittopo_gridwidth)   # take care of left over
 
-        print(len_grid,  wid_grid , '    ********************    ') 
-
+       
         #epsilon = 0.5
 
 
@@ -1655,11 +1531,7 @@ def main():
         maxlimits_vec = np.append(temp_vec, inittopo_maxlimits)
 
 
-        print(maxlimits_vec, ' maxlimits ')
-
-        print(minlimits_vec, ' maxlimits ')
-
-
+     
 
 
 
@@ -1682,8 +1554,7 @@ def main():
         stepratio_vec =  np.repeat(stepsize_ratio, vec_parameters.size) 
         num_param = vec_parameters.size
 
-        print(vec_parameters) 
-
+   
         erodep_coords = np.array([[42,10],[39,8],[75,51],[59,13],[40,5],[6,20],[14,66],[4,40],[72,73],[46,64]])  # need to hand pick given your problem
 
 
